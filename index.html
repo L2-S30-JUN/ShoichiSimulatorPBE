@@ -440,9 +440,9 @@ function spawnDagger(x,y){
 function pickupDagger(idx){
   daggers.splice(idx,1);
   sfxPickup();
-  // 단검 회수 → W 쿨다운 0.05초로 설정 (쿨초기화 모드에서도 동일 적용)
-  P.wCd=0.05;
-  log('단검 회수 → W 쿨다운 0.05초!');
+  // 단검 회수 → W 쿨다운 0.1초로 설정 (쿨초기화 모드에서도 동일 적용)
+  P.wCd=0.1;
+  log('단검 회수 → W 쿨다운 0.1초!');
   // auto-throw at nearest enemy within 5m
   let best=null, bestD=Infinity;
   for(const d of dummies){
