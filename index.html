@@ -624,7 +624,7 @@ function castQ(){
   moveTarget=null;
   P.atkTarget=null;P.wAutoTarget=null;
   const wasEnhanced=P.qEnhanced;
-  P.qCasting=true;P.qCastTimer=wasEnhanced?0.367:0.2; // Q: 선딜 0.2초, Q2: 선딜 0.2초 + 후딜 0.167초
+  P.qCasting=true;P.qCastTimer=wasEnhanced?23/60:0.2; // Q: 선딜 0.2초, Q2: 23프레임(60fps 기준)
   P.qCd=0.3; // 임시 쿨다운 (연타 방지, 판정 시 실제 쿨다운으로 덮어씀)
 
   // 0.2초 선딜 후 판정
@@ -1816,7 +1816,7 @@ document.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(k==='q')tryOrBuffer(castQ);
   else if(k==='w'){
-    if(P.qCasting){P.qCasting=false;castW();}
+    if(P.qCasting){skillBuffer=castW;skillBufferMouse={x:mouse.x,y:mouse.y};} // Q 시전 중 W: 버퍼만 (Q 캔슬 불가)
     else if(P.eCasting){skillBuffer=castW;skillBufferMouse={x:mouse.x,y:mouse.y};} // E 도중 W: 항상 버퍼 (빠른 EW는 castE의 20프레임 스케줄, 느린 EW는 즉시 캔슬 경로)
     else tryOrBuffer(castW);
   }
