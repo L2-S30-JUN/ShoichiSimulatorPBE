@@ -85,12 +85,13 @@ canvas{cursor:none;display:block;transform-origin:center center}
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="shake-chk" checked> 화면 흔들림</label></div>
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="quarter-chk" checked> 쿼터뷰</label></div>
   <div style="margin-top:6px;border-top:1px solid #333;padding-top:6px;font-size:11px;color:#aaa">카메라 조정</div>
-  <div style="font-size:11px"><label>Roll(Z): <input type="range" id="cam-roll" min="-180" max="180" step="0.5" value="-8.5" style="width:90px"><input type="number" id="cam-roll-num" step="0.5" value="-8.5" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>PitchY: <input type="range" id="cam-sy" min="0.05" max="2" step="0.01" value="0.74" style="width:90px"><input type="number" id="cam-sy-num" step="0.01" value="0.74" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>YawX: <input type="range" id="cam-sx" min="0.05" max="2" step="0.01" value="0.82" style="width:90px"><input type="number" id="cam-sx-num" step="0.01" value="0.82" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>TiltX(눕힘): <input type="range" id="cam-tx" min="-85" max="85" step="0.5" value="33.5" style="width:90px"><input type="number" id="cam-tx-num" step="0.5" value="33.5" style="width:55px"></label></div>
+  <div style="font-size:11px"><label>Roll(Z): <input type="range" id="cam-roll" min="-180" max="180" step="0.5" value="-8" style="width:90px"><input type="number" id="cam-roll-num" step="0.5" value="-8" style="width:55px"></label></div>
+  <div style="font-size:11px"><label>PitchY: <input type="range" id="cam-sy" min="0.05" max="2" step="0.01" value="1.01" style="width:90px"><input type="number" id="cam-sy-num" step="0.01" value="1.01" style="width:55px"></label></div>
+  <div style="font-size:11px"><label>YawX: <input type="range" id="cam-sx" min="0.05" max="2" step="0.01" value="0.92" style="width:90px"><input type="number" id="cam-sx-num" step="0.01" value="0.92" style="width:55px"></label></div>
+  <div style="font-size:11px"><label>TiltX(눕힘): <input type="range" id="cam-tx" min="-85" max="85" step="0.5" value="44.5" style="width:90px"><input type="number" id="cam-tx-num" step="0.5" value="44.5" style="width:55px"></label></div>
   <div style="font-size:11px"><label>TiltY: <input type="range" id="cam-ty" min="-85" max="85" step="0.5" value="0.5" style="width:90px"><input type="number" id="cam-ty-num" step="0.5" value="0.5" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>원근거리: <input type="range" id="cam-persp" min="100" max="8000" step="50" value="800" style="width:90px"><input type="number" id="cam-persp-num" step="50" value="800" style="width:60px"></label></div>
+  <div style="font-size:11px"><label>원근거리: <input type="range" id="cam-persp" min="100" max="8000" step="50" value="700" style="width:90px"><input type="number" id="cam-persp-num" step="50" value="700" style="width:60px"></label></div>
+  <div style="font-size:11px"><label>줌: <input type="range" id="cam-zoom" min="0.3" max="3" step="0.01" value="2" style="width:90px"><input type="number" id="cam-zoom-num" step="0.01" value="2" style="width:55px"></label></div>
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="overlay-chk"> 원작 오버레이</label> <input type="range" id="overlay-a" min="0" max="1" step="0.05" value="0.4" style="width:60px;vertical-align:middle"></div>
   <div style="display:none" class="row">
     <button id="fps-down">-</button><span id="fps-val"></span><button id="fps-up">+</button>
@@ -247,22 +248,32 @@ const CONF = {
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let quarterView = true;
-const cam = { roll: -8.5, scaleY: 0.74, scaleX: 0.82, tiltX: 33.5, tiltY: 0.5, persp: 800 };
+const cam = { roll: -8, scaleY: 1.01, scaleX: 0.92, tiltX: 44.5, tiltY: 0.5, persp: 700, zoom: 2 };
 function applyCamera(){
   if(quarterView){
-    canvas.style.transform=`perspective(${cam.persp}px) rotateX(${cam.tiltX}deg) rotateY(${cam.tiltY}deg) rotate(${cam.roll}deg) scale(${cam.scaleX},${cam.scaleY})`;
+    canvas.style.transform=`scale(${cam.zoom}) perspective(${cam.persp}px) rotateX(${cam.tiltX}deg) rotateY(${cam.tiltY}deg) rotate(${cam.roll}deg) scale(${cam.scaleX},${cam.scaleY})`;
   } else {
-    canvas.style.transform='';
+    canvas.style.transform=`scale(${cam.zoom})`;
   }
 }
 applyCamera();
+// 내부 버퍼 해상도는 고정 → 렌더링 비용과 비율이 해상도 독립적으로 일관됨
+const DESIGN_W = 2400;
+const DESIGN_H_Q = 1600;  // 쿼터뷰
+const DESIGN_H_F = 1350;  // 평면
+function fitCanvas() {
+  const vw = window.innerWidth, vh = window.innerHeight - 20;
+  const s = Math.min(vw / canvas.width, vh / canvas.height);
+  canvas.style.width = (canvas.width * s) + 'px';
+  canvas.style.height = (canvas.height * s) + 'px';
+}
 function resize() {
-  // 맵을 뷰포트보다 크게 잡아 캐릭터 주변에 넓은 월드 확보 (position:fixed로 중앙 정렬됨)
-  canvas.width = 3600;
-  canvas.height = quarterView ? 2400 : 1800;
+  canvas.width = DESIGN_W;
+  canvas.height = quarterView ? DESIGN_H_Q : DESIGN_H_F;
+  fitCanvas();
 }
 resize();
-window.addEventListener('resize', resize);
+window.addEventListener('resize', () => { fitCanvas(); });
 const cursorImg=new Image();cursorImg.src='icon/cursor.png';
 const playerImg=new Image();playerImg.src='sprite/sprite111.png';
 const CURSOR_W=74;
@@ -407,9 +418,11 @@ const effects = [];
 const walls = [];
 let skillBuffer = null;  // 선입력 버퍼 (시전시간 중 마지막 입력 1개 저장)
 let skillBufferMouse = null; // 선입력 시점의 마우스 좌표
+const CD_BUFFER_THRESHOLD = 0.1; // 쿨다운 ≤ 이 값일 때 선입력 허용
 function isCasting(){return P.dashing||P.rCasting||P.qCasting||(P.eCasting&&!P.eCanCancel);}
 function tryOrBuffer(fn){if(isCasting()){skillBuffer=fn;skillBufferMouse={x:mouse.x,y:mouse.y};}else{fn();}}
 function flushBuffer(){if(skillBuffer){const fn=skillBuffer;const sm=skillBufferMouse;skillBuffer=null;skillBufferMouse=null;const ox=mouse.x,oy=mouse.y;mouse.x=sm.x;mouse.y=sm.y;fn();mouse.x=ox;mouse.y=oy;}}
+function bufferShortCd(fn, cd){ if(cd>0 && cd<=CD_BUFFER_THRESHOLD){ skillBuffer=fn; skillBufferMouse={x:mouse.x,y:mouse.y}; } }
 let aMode = false;       // A키 공격 모드 (사거리 표시 + 좌클릭 타겟팅)
 let shake = {x:0,y:0,t:0,m:0};
 let shakeEnabled = true;
@@ -611,7 +624,8 @@ function doBasicAttack(){
 // Q - 표리
 // ============================================================
 function castQ(){
-  if(P.qCd>0||P.dashing||P.rCasting||P.hopping)return;
+  if(P.qCd>0){ bufferShortCd(castQ, P.qCd); return; }
+  if(P.dashing||P.rCasting||P.hopping)return;
   if(P.qCasting){
     if(!cdResetMode)return;
     // 쿨초기화 모드: 진행 중인 Q 캐스트 취소 후 재시전
@@ -684,7 +698,8 @@ function castQ(){
 let wPending=null; // {target, type}
 
 function castW(){
-  if(P.wCd>0||P.rCasting)return;
+  if(P.wCd>0){ bufferShortCd(castW, P.wCd); return; }
+  if(P.rCasting)return;
   if(P.eCasting&&!P.eCanCancel)return; // E 선딜 0.2초 중 스킬 불가
 
   // Find target near mouse: enemy or dagger
@@ -841,7 +856,8 @@ function executeWTeleport(){
 // E - 협상
 // ============================================================
 function castE(){
-  if(P.eCd>0||P.eInternalCd>0||P.locked||P.dashing||P.rCasting||P.hopping)return;
+  if(P.eCd>0){ bufferShortCd(castE, P.eCd); return; }
+  if(P.eInternalCd>0||P.locked||P.dashing||P.rCasting||P.hopping)return;
   if(P.eCasting){
     if(!cdResetMode)return;
     cancelScheduledByTag('E');P.eCasting=false;P.eCastTimer=0;P.eCanCancel=false;P.eHopActive=false;
@@ -916,7 +932,8 @@ function castE(){
 // R - 무자비 (선딜 0.3초 → X자 단검 투척 → 후딜 0.6초)
 // ============================================================
 function castR(){
-  if(P.rCd>0||P.rInternalCd>0||P.locked||P.dashing||P.hopping)return;
+  if(P.rCd>0){ bufferShortCd(castR, P.rCd); return; }
+  if(P.rInternalCd>0||P.locked||P.dashing||P.hopping)return;
   if(P.rCasting){
     if(!cdResetMode)return;
     cancelScheduledByTag('R');P.rCasting=false;P.rCastTimer=0;
@@ -1035,7 +1052,8 @@ function hitDummy(d, dmg, dir, grantStack){
 // BLINK (점멸)
 // ============================================================
 function castBlink(){
-  if(P.blinkCd>0||isCasting())return;
+  if(P.blinkCd>0){ bufferShortCd(castBlink, P.blinkCd); return; }
+  if(isCasting())return;
   sfxBlink();
   cancelAttack();
   P.atkWindup=false;P.atkWindupTarget=null;
@@ -1168,6 +1186,8 @@ function update(rdt){
   if(P.rInternalCd>0)P.rInternalCd-=tick;
   if(P.blinkCd>0)P.blinkCd-=tick;
   if(P.dCd>0)P.dCd-=tick;
+  // 쿨다운 만료 시 선입력 버퍼 자동 플러시 (버퍼된 fn이 자체적으로 CD 재검사)
+  if(skillBuffer && !isCasting() && !P.atkWindup && !P.atkPending) flushBuffer();
   if(P.dTimer>0){P.dTimer-=tick;if(P.dTimer<=0){P.dActive=false;playSfx('cloakend');log('은신 해제');}}
   if(P.dRecastTimer>0){P.dRecastTimer-=tick;if(P.dRecastTimer<=0&&P.dPhase===1){P.dPhase=0;P.dCd=cdResetMode?0:CONF.dCd;log('은신 재사용 시간 만료');}}
   if(P.lockTimer>0){P.lockTimer-=tick;if(P.lockTimer<=0){P.locked=false;flushBuffer();}}
@@ -1738,6 +1758,8 @@ document.addEventListener('mousemove',e=>{
   const r=wrap.getBoundingClientRect();
   const cx=r.left+r.width/2, cy=r.top+r.height/2;
   let xs=e.clientX-cx, ys=e.clientY-cy;
+  // 외부 줌 역적용 (transform 가장 바깥 scale(zoom))
+  xs /= cam.zoom; ys /= cam.zoom;
   if(quarterView){
     // 순서: perspective * rotateX(tx) * rotateY(ty) * rotate(roll) * scale(sx,sy)
     const tx=cam.tiltX*Math.PI/180, ty=cam.tiltY*Math.PI/180;
@@ -1754,6 +1776,9 @@ document.addEventListener('mousemove',e=>{
     const vy = -u*Math.sin(rr) + v*Math.cos(rr);
     xs = ux/cam.scaleX; ys = vy/cam.scaleY;
   }
+  // CSS 픽셀 → 캔버스 버퍼 픽셀 변환 (해상도 독립)
+  const sx = canvas.width / r.width, sy = canvas.height / r.height;
+  xs *= sx; ys *= sy;
   mouse.x=xs+canvas.width/2;mouse.y=ys+canvas.height/2;
   if(rightDown) handleRightClick(mouse.x,mouse.y);
 });
@@ -1879,6 +1904,7 @@ bindCam('cam-sx','cam-sx-num','scaleX',v=>v.toFixed(2));
 bindCam('cam-tx','cam-tx-num','tiltX');
 bindCam('cam-ty','cam-ty-num','tiltY');
 bindCam('cam-persp','cam-persp-num','persp');
+bindCam('cam-zoom','cam-zoom-num','zoom',v=>v.toFixed(2));
 const refOv=document.getElementById('ref-overlay');
 document.getElementById('overlay-chk').addEventListener('change',e=>{refOv.style.display=e.target.checked?'block':'none';});
 document.getElementById('overlay-a').addEventListener('input',e=>{refOv.style.opacity=e.target.value;});
