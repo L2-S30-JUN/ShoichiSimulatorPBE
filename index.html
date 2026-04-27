@@ -10,7 +10,7 @@
 img{forced-color-adjust:none}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#111;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden;font-family:'Segoe UI','맑은 고딕',sans-serif;color:#ddd}
-canvas{cursor:none;display:block;transform-origin:center center}
+canvas{cursor:none;display:block;transform-origin:center center;will-change:transform;backface-visibility:hidden}
 #custom-cursor{position:fixed;left:0;top:0;pointer-events:none;z-index:9999;display:none;will-change:transform}
 #hud{position:fixed;bottom:16px;display:flex;gap:10px;z-index:10}
 #stack-indicator{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:24px;height:24px;display:none;align-items:center;justify-content:center;z-index:10;pointer-events:none;--p:100%}
@@ -267,10 +267,24 @@ function fitCanvas() {
   canvas.style.width = (canvas.width * s) + 'px';
   canvas.style.height = (canvas.height * s) + 'px';
 }
+// 그리드 오프스크린 캐시 (매 프레임 100+ stroke 호출 회피)
+const gridCanvas = document.createElement('canvas');
+const gridCtx = gridCanvas.getContext('2d');
+function renderGrid() {
+  gridCanvas.width = canvas.width;
+  gridCanvas.height = canvas.height;
+  gridCtx.strokeStyle = '#1a1a2a';
+  gridCtx.lineWidth = 1;
+  gridCtx.beginPath();
+  for (let x = 0; x < canvas.width; x += 40) { gridCtx.moveTo(x, 0); gridCtx.lineTo(x, canvas.height); }
+  for (let y = 0; y < canvas.height; y += 40) { gridCtx.moveTo(0, y); gridCtx.lineTo(canvas.width, y); }
+  gridCtx.stroke();
+}
 function resize() {
   canvas.width = DESIGN_W;
   canvas.height = quarterView ? DESIGN_H_Q : DESIGN_H_F;
   fitCanvas();
+  renderGrid();
 }
 resize();
 window.addEventListener('resize', () => { fitCanvas(); });
@@ -379,7 +393,7 @@ const P = {
   // Q
   qCd: 0, qEnhanced: false, qEnhTimer: 0,
   // W
-  wCd: 0,
+  wCd: 0, wInternalCd: 0,
   // E
   eCd: 0, eInternalCd: 0,
   // R
@@ -453,9 +467,9 @@ function spawnDagger(x,y){
 function pickupDagger(idx){
   daggers.splice(idx,1);
   sfxPickup();
-  // 단검 회수 → W 쿨다운 0.1초로 설정 (쿨초기화 모드에서도 동일 적용)
-  P.wCd=0.1;
-  log('단검 회수 → W 쿨다운 0.1초!');
+  // 단검 회수 → W 쿨다운 0.05초로 설정 (쿨초기화 모드에서도 동일 적용)
+  P.wCd=0.05;
+  log('단검 회수 → W 쿨다운 0.05초!');
   // auto-throw at nearest enemy within 5m
   let best=null, bestD=Infinity;
   for(const d of dummies){
@@ -699,6 +713,7 @@ let wPending=null; // {target, type}
 
 function castW(){
   if(P.wCd>0){ bufferShortCd(castW, P.wCd); return; }
+  if(P.wInternalCd>0||P.locked||P.dashing||P.hopping)return;
   if(P.rCasting)return;
   if(P.eCasting&&!P.eCanCancel)return; // E 선딜 0.2초 중 스킬 불가
 
@@ -750,6 +765,7 @@ function executeW(target,type){
   moveTarget=null;
   wPending=null;
   P.wCd=applyCdr(CONF.wCd);
+  P.wInternalCd=0.13;
   // 즉시 순간이동
   executeWTeleport();
   log(`비약 → ${type==='enemy'?'적':'단검'} 대상`);
@@ -1182,6 +1198,7 @@ function update(rdt){
   if(P.wCd>0)P.wCd-=tick;
   if(P.eCd>0)P.eCd-=tick;
   if(P.rCd>0)P.rCd-=tick;
+  if(P.wInternalCd>0)P.wInternalCd-=tick;
   if(P.eInternalCd>0)P.eInternalCd-=tick;
   if(P.rInternalCd>0)P.rInternalCd-=tick;
   if(P.blinkCd>0)P.blinkCd-=tick;
@@ -1362,7 +1379,7 @@ function update(rdt){
 
   // UI
   updateSkillUI('cQ','bQ',P.qCd,CONF.qCd);
-  updateSkillUI('cW','bW',P.wCd,CONF.wCd);
+  updateSkillUI('cW','bW',Math.max(P.wCd,P.wInternalCd),CONF.wCd);
   updateSkillUI('cE','bE',Math.max(P.eCd,P.eInternalCd),CONF.eCd);
   updateSkillUI('cR','bR',Math.max(P.rCd,P.rInternalCd),CONF.rCd);
   updateSkillUI('cD','bD',P.dCd,CONF.dCd);
@@ -1390,10 +1407,8 @@ function draw(){
   ctx.translate(shake.x,shake.y);
   ctx.clearRect(-10,-10,canvas.width+20,canvas.height+20);
 
-  // Grid
-  ctx.strokeStyle='#1a1a2a';ctx.lineWidth=1;
-  for(let x=0;x<canvas.width;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()}
-  for(let y=0;y<canvas.height;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}
+  // Grid (오프스크린 캐시)
+  ctx.drawImage(gridCanvas, 0, 0);
 
 
   // Move target
@@ -1733,7 +1748,7 @@ function draw(){
 let lastTime=performance.now();
 const fpsOptions=[0,30,60,120,144]; // 0=무제한
 let fpsLimitIdx=0;
-let fpsInterval=0; // 0=무제한
+let fpsInterval=0; // 0=무제한 (rAF 동기)
 function loop(now){
   requestAnimationFrame(loop);
   if(fpsInterval>0&&(now-lastTime)<fpsInterval)return;
