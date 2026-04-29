@@ -712,8 +712,9 @@ function castQ(){
 let wPending=null; // {target, type}
 
 function castW(){
-  if(P.wCd>0){ bufferShortCd(castW, P.wCd); return; }
-  if(P.wInternalCd>0||P.locked||P.dashing||P.hopping)return;
+  if(P.wCd>0){ return; }
+  if(cdResetMode && P.wInternalCd>0){ skillBuffer=castW; skillBufferMouse={x:mouse.x,y:mouse.y}; return; }
+  if(P.locked||P.dashing||P.hopping)return;
   if(P.rCasting)return;
   if(P.eCasting&&!P.eCanCancel)return; // E 선딜 0.2초 중 스킬 불가
 
@@ -765,7 +766,7 @@ function executeW(target,type){
   moveTarget=null;
   wPending=null;
   P.wCd=applyCdr(CONF.wCd);
-  P.wInternalCd=0.13;
+  if(cdResetMode && type==='enemy') P.wInternalCd=0.3;
   // 즉시 순간이동
   executeWTeleport();
   log(`비약 → ${type==='enemy'?'적':'단검'} 대상`);
@@ -858,8 +859,9 @@ function executeWTeleport(){
       const dd=dist(P,d);
       if(dd<=CONF.atkRange+d.r&&dd<bd){bd=dd;inRange=d;}
     }
-    if(inRange){
+    if(inRange && !skillBuffer){
       // W 착지 자동평타: 평타명령(atkTarget)과 별개로 wAutoTarget에 저장해 계속 평타를 치게 함
+      // 버퍼된 다음 스킬이 대기 중이면 자동평타 스킵 (어차피 곧 캔슬될 것)
       P.wAutoTarget=inRange;
       P.atkWindup=true;P.atkWindupTimer=Math.max(0,0.27/atkSpeedMult-0.2);
       P.atkWindupTarget=inRange;moveTarget=null;sfxAtk();
@@ -1853,6 +1855,7 @@ canvas.addEventListener('mouseup',e=>{
 });
 
 document.addEventListener('keydown',e=>{
+  if(e.repeat)return; // 키 홀드 시 자동 반복 입력 무시
   const k=e.key.toLowerCase();
   if(k==='q')tryOrBuffer(castQ);
   else if(k==='w'){
