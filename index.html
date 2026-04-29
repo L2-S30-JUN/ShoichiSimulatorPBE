@@ -468,7 +468,9 @@ function pickupDagger(idx){
   daggers.splice(idx,1);
   sfxPickup();
   // 단검 회수 → W 쿨다운 0.05초로 설정 (쿨초기화 모드에서도 동일 적용)
+  // 내부쿨다운도 함께 클리어 (W로 적을 친 뒤 경로 단검 회수 시 0.3초 내부쿨이 남아있던 버그 수정)
   P.wCd=0.05;
+  P.wInternalCd=0;
   log('단검 회수 → W 쿨다운 0.05초!');
   // auto-throw at nearest enemy within 5m
   let best=null, bestD=Infinity;
