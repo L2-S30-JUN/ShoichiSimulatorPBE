@@ -53,6 +53,8 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
 #cdr-ui button:hover{background:#333;border-color:#5af}
 #cdr-ui .val{font-size:18px;font-weight:bold;color:#5af;min-width:50px;text-align:center}
 #cdr-ui .rate{font-size:12px;color:#f80;margin-top:4px;text-align:center}
+#cd-warning{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 0 4px #000,0 0 2px #000,1px 1px 0 #000;padding:4px 12px;pointer-events:none;opacity:0;transition:opacity .25s;z-index:100;white-space:nowrap}
+#cd-warning.show{opacity:1}
 </style>
 </head>
 <body>
@@ -74,7 +76,7 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
     <button id="cdr-up">+</button>
   </div>
   <div class="rate" id="cdr-rate">감소율: 0%</div>
-  <div style="margin-top:8px"><button id="cd-reset-btn" style="width:100%;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">쿨초기화 모드: OFF</button></div>
+  <div style="margin-top:8px"><button id="cd-reset-btn" style="width:100%;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">쿨초기화 모드: OFF</button><div style="font-size:10px;color:#888;text-align:center;margin-top:2px">기본 단축키는 ~(물결표)</div></div>
   <div style="margin-top:10px" class="label">공격속도</div>
   <div class="row">
     <button id="as-down">-</button>
@@ -109,6 +111,7 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
   <div class="sk ready" id="bD" style="margin-left:12px;border-color:#888"><span class="key">D</span><img class="icon-img" src="icon/daggerskill.png" style="width:38px;height:38px"><div class="cd" id="cD"></div></div>
   <div class="sk ready" id="bF" style="border-color:#5af"><span class="key">F</span><img class="icon-img" src="icon/blinkfix.png" style="width:38px;height:38px"><div class="cd" id="cF"></div></div>
 </div>
+<div id="cd-warning">스킬이 아직 준비되지 않았습니다!</div>
 <div id="credit">ⓘ 본 사이트는 (주)님블뉴런의 '이터널리턴'을 바탕으로 제작된 2차 창작 사이트입니다.</div>
 <div id="credit-modal">
   <div class="box">
@@ -299,7 +302,7 @@ const CURSOR_H=Math.round(74*347/619);
 const AC = new (window.AudioContext || window.webkitAudioContext)();
 function beep(f,d,t='square',v=.1){const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
 // WAV 효과음 (WebAudio AudioBuffer로 디코드 — 지연 없음)
-const sfxNames=['attack','attackhit','Q_missed','Qdamage','Q2_missed','Q2damage','W_daggerhit','Wdamage','E_missed','Edagger_hit','R_missed','R_hit','daggerdrop','daggerhit','blink','nodagger','daggerskill','daggerskill2','cloakend'];
+const sfxNames=['attack','attackhit','Q_missed','Qdamage','Q2_missed','Q2damage','W_daggerhit','Wdamage','E_missed','Edagger_hit','R_missed','R_hit','daggerdrop','daggerhit','blink','nodagger','daggerskill','daggerskill2','cloakend','cooldown'];
 const sfxBuf={};
 sfxNames.forEach(name=>{
   fetch(`sfx/${name}.wav`).then(r=>r.arrayBuffer()).then(b=>AC.decodeAudioData(b)).then(buf=>{sfxBuf[name]=buf;}).catch(()=>{});
@@ -376,6 +379,17 @@ function log(msg) {
   logs.unshift(msg);
   if (logs.length > 6) logs.pop();
   logEl.innerHTML = logs.map(l => `<div>${l}</div>`).join('');
+}
+
+// 쿨타임 중 스킬 시도 알림
+const cdWarningEl = document.getElementById('cd-warning');
+let cdWarningTimer = null;
+function cooldownNotify(skillName){
+  playSfx('cooldown');
+  log(`<span style="color:#f80">${skillName} 스킬이 아직 준비되지 않았습니다!</span>`);
+  cdWarningEl.classList.add('show');
+  if(cdWarningTimer) clearTimeout(cdWarningTimer);
+  cdWarningTimer = setTimeout(()=>{ cdWarningEl.classList.remove('show'); cdWarningTimer=null; }, 4000);
 }
 
 // ============================================================
@@ -461,7 +475,6 @@ function spawnDagger(x,y){
   y = clamp(y, 10, canvas.height-10);
   daggers.push({x, y, age:0, pickup:false});
   sfxDaggerDrop();
-  log('🗡 단검 생성');
 }
 
 function pickupDagger(idx){
@@ -471,7 +484,6 @@ function pickupDagger(idx){
   // 내부쿨다운도 함께 클리어 (W로 적을 친 뒤 경로 단검 회수 시 0.3초 내부쿨이 남아있던 버그 수정)
   P.wCd=0.05;
   P.wInternalCd=0;
-  log('단검 회수 → W 쿨다운 0.05초!');
   // auto-throw at nearest enemy within 5m
   let best=null, bestD=Infinity;
   for(const d of dummies){
@@ -490,11 +502,9 @@ function pickupDagger(idx){
       r:5, life:40, fromPassive:true, target:best,
     });
     sfxDagger();
-    log(`🗡 단검 투척! (${best.eMark?'마크 +25%':''})`);
     // E mark: reduce E cd by 1s
     if(best.eMark && P.eCd>0){
       P.eCd = Math.max(0, P.eCd - 1);
-      log('협상 쿨다운 -1초');
     }
   }
 }
@@ -585,9 +595,7 @@ function resolveAttack(){
     effects.push({type:'dagdrop',x:dgX,y:dgY,sx:tgt.x,sy:tgt.y,t:0,mt:9999,spawnTime:performance.now()+667}); // 단검 생성 시 제거
     schedule(0.667,()=>{
       spawnDagger(dgX,dgY);
-      log('강화 평타 단검 생성 (적 뒤)');
     });
-    log('⚡ 강화 공격!');
   } else {
     hitDummy(tgt, 40, atkAngle, false);
     sfxAtkHit();
@@ -640,7 +648,7 @@ function doBasicAttack(){
 // Q - 표리
 // ============================================================
 function castQ(){
-  if(P.qCd>0){ bufferShortCd(castQ, P.qCd); return; }
+  if(P.qCd>0){ cooldownNotify('Q'); return; }
   if(P.dashing||P.rCasting||P.hopping)return;
   if(P.qCasting){
     if(!cdResetMode)return;
@@ -678,7 +686,6 @@ function castQ(){
       document.getElementById('bQ').classList.remove('enhanced');
       document.getElementById('qIcon').src='icon/shoqfix.png';
       P.qCd=Math.max(0,applyCdr(CONF.qCd)-4);
-      log('강화 Q 사용 → 단검 생성, 쿨다운 -4초');
     } else {
       // Normal Q - rectangle
       let anyHit=false;
@@ -699,7 +706,6 @@ function castQ(){
         P.qEnhTimer=CONF.qEnhDur;
         document.getElementById('bQ').classList.add('enhanced');
         document.getElementById('qIcon').src='icon/shoq2fix.png';
-        log('Q 적중! 쿨다운 시작 (-3초), 강화Q 준비');
       } else {
         P.qCd=applyCdr(CONF.qCd);
       }
@@ -714,7 +720,7 @@ function castQ(){
 let wPending=null; // {target, type}
 
 function castW(){
-  if(P.wCd>0){ return; }
+  if(P.wCd>0){ cooldownNotify('W'); return; }
   if(cdResetMode && P.wInternalCd>0){ skillBuffer=castW; skillBufferMouse={x:mouse.x,y:mouse.y}; return; }
   if(P.locked||P.dashing||P.hopping)return;
   if(P.rCasting)return;
@@ -740,7 +746,7 @@ function castW(){
     }
   }
 
-  if(!bestTarget){log('W: 대상 없음');wPending=null;return}
+  if(!bestTarget){log('비약 대상 없음');wPending=null;return}
 
   const dp=dist(P,bestTarget);
   if(dp<=CONF.wRange){
@@ -754,7 +760,6 @@ function castW(){
     // 범위 밖 → E는 유지 (E 후딜이 끝나야 접근 시작), 대기열에만 등록
     wPending={target:bestTarget,type:bestType};
     if(!P.eCasting) moveTarget={x:bestTarget.x,y:bestTarget.y};
-    log('W: 대상 접근 중...');
   }
 }
 
@@ -876,7 +881,7 @@ function executeWTeleport(){
 // E - 협상
 // ============================================================
 function castE(){
-  if(P.eCd>0){ bufferShortCd(castE, P.eCd); return; }
+  if(P.eCd>0){ cooldownNotify('E'); return; }
   if(P.eInternalCd>0||P.locked||P.dashing||P.rCasting||P.hopping)return;
   if(P.eCasting){
     if(!cdResetMode)return;
@@ -933,11 +938,10 @@ function castE(){
         d.eMark=true;d.eMarkTimer=CONF.eMarkDur;
         sfxEdaggerHit();
         eProj.eHit=true;
-        log('협상 적중! 슬로우 + 마크 부여');
         const behind=a;
         const edgX=d.x+Math.cos(behind)*1.2*PX, edgY=d.y+Math.sin(behind)*1.2*PX;
         effects.push({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000});
-        schedule(CONF.eDaggerDelay,()=>{spawnDagger(edgX,edgY);log('협상 단검 생성 (적 뒤)');});
+        schedule(CONF.eDaggerDelay,()=>{spawnDagger(edgX,edgY);});
       }
     }
     if(!eProj.eHit) projectiles.push(eProj);
@@ -945,14 +949,13 @@ function castE(){
   },'E');
 
   P.eCd=applyCdr(CONF.eCd);
-  log('협상 시전');
 }
 
 // ============================================================
 // R - 무자비 (선딜 0.3초 → X자 단검 투척 → 후딜 0.6초)
 // ============================================================
 function castR(){
-  if(P.rCd>0){ bufferShortCd(castR, P.rCd); return; }
+  if(P.rCd>0){ cooldownNotify('R'); return; }
   if(P.rInternalCd>0||P.locked||P.dashing||P.hopping)return;
   if(P.rCasting){
     if(!cdResetMode)return;
@@ -970,7 +973,6 @@ function castR(){
   const preDelay=0.2;   // 선딜 0.2초
   const postDelay=0.6;  // 후딜 0.6초
 
-  log('무자비 시전...');
 
   // 선딜 0.2초 후 → 내부 AoE + X자 단검 순차 투척
   schedule(preDelay,()=>{
@@ -1020,7 +1022,6 @@ function castR(){
         let dgX=castX+dx*CONF.rDaggerPathLen, dgY=castY+dy*CONF.rDaggerPathLen;
         if(wallBlock(dgX,dgY,5)){
           dgX=castX+dx*15;dgY=castY+dy*15;
-          log(`${dir.name} 벽 차단 → 발밑!`);
         }
         spawnDagger(dgX,dgY);
 
@@ -1033,7 +1034,6 @@ function castR(){
       },'R');
     });
 
-    log('단검 투척 완료! (후딜 0.6초)');
 
     // 후딜 0.6초 후 시전 종료
     schedule(postDelay,()=>{
@@ -1048,7 +1048,6 @@ function castR(){
         }
         if(near) P.wAutoTarget=near;
       }
-      log('무자비 시전 완료');
       flushBuffer();
     },'R');
   },'R');
@@ -1065,14 +1064,14 @@ function hitDummy(d, dmg, dir, grantStack){
   effects.push({type:'dmg',x:d.x,y:d.y-d.r-15,t:0,mt:40,val:dmg});
   shake.t=3;shake.m=2;
   if(grantStack)addStack();
-  if(P.dActive){P.dActive=false;P.dTimer=0;playSfx('cloakend');log('공격 적중 → 은신 해제');}
+  if(P.dActive){P.dActive=false;P.dTimer=0;playSfx('cloakend');}
 }
 
 // ============================================================
 // BLINK (점멸)
 // ============================================================
 function castBlink(){
-  if(P.blinkCd>0){ bufferShortCd(castBlink, P.blinkCd); return; }
+  if(P.blinkCd>0){ cooldownNotify('F'); return; }
   if(isCasting())return;
   sfxBlink();
   cancelAttack();
@@ -1100,7 +1099,6 @@ function castBlink(){
   }
   moveTarget=null;
   P.blinkCd=applyCdr(CONF.blinkCd);
-  log('점멸!');
 }
 
 // ============================================================
@@ -1126,7 +1124,6 @@ function executeD(tgt){
   playSfx('daggerskill2');
   // D2 이후 자동평타
   if(tgt.alive){P.atkWindup=true;P.atkWindupTimer=0.167/atkSpeedMult;P.atkWindupTarget=tgt;P.atkTarget=tgt;sfxAtk();}
-  log('은신 순간이동!');
 }
 function checkDPending(){
   if(!dPending||P.dPhase!==1)return;
@@ -1141,7 +1138,7 @@ function checkDPending(){
   }
 }
 function castD(){
-  if(P.dCd>0)return;
+  if(P.dCd>0){ cooldownNotify('D'); return; }
   if(P.dPhase===0){
     // 1차: 은신 시작
     P.dActive=true;
@@ -1149,7 +1146,6 @@ function castD(){
     P.dRecastTimer=CONF.dRecastWindow;
     P.dPhase=1;
     playSfx('daggerskill');
-    log('은신! 이동속도 +25%');
   } else if(P.dPhase===1){
     // 2차: 적 뒤로 순간이동
     let bestTgt=null, bestD=Infinity;
@@ -1158,20 +1154,18 @@ function castD(){
       const dm=dist(mouse,d);
       if(dm<d.r+30 && dm<bestD){bestD=dm;bestTgt=d;}
     }
-    if(!bestTgt){log('D: 대상 없음');return;}
+    if(!bestTgt){return;}
     const dd=dist(P,bestTgt);
     // E 넉백 중이면 D2는 E 캔슬 없이 대기 → 누를 때 범위 안이었다면 E 종료 후 범위 재검사 없이 발동
     if(P.eCasting){
       dPending=bestTgt;
       dPendingInstant=(dd<=CONF.atkRange+bestTgt.r);
-      log('D: E 딜레이 대기 중...');
     } else if(dd<=CONF.atkRange+bestTgt.r){
       executeD(bestTgt);
     } else {
       // 사거리 밖 → 대상 쪽으로 이동
       dPending=bestTgt;
       moveTarget={x:bestTgt.x,y:bestTgt.y};
-      log('D: 대상 접근 중...');
     }
   }
 }
@@ -1209,8 +1203,8 @@ function update(rdt){
   if(P.dCd>0)P.dCd-=tick;
   // 쿨다운 만료 시 선입력 버퍼 자동 플러시 (버퍼된 fn이 자체적으로 CD 재검사)
   if(skillBuffer && !isCasting() && !P.atkWindup && !P.atkPending) flushBuffer();
-  if(P.dTimer>0){P.dTimer-=tick;if(P.dTimer<=0){P.dActive=false;playSfx('cloakend');log('은신 해제');}}
-  if(P.dRecastTimer>0){P.dRecastTimer-=tick;if(P.dRecastTimer<=0&&P.dPhase===1){P.dPhase=0;P.dCd=cdResetMode?0:CONF.dCd;log('은신 재사용 시간 만료');}}
+  if(P.dTimer>0){P.dTimer-=tick;if(P.dTimer<=0){P.dActive=false;playSfx('cloakend');}}
+  if(P.dRecastTimer>0){P.dRecastTimer-=tick;if(P.dRecastTimer<=0&&P.dPhase===1){P.dPhase=0;P.dCd=cdResetMode?0:CONF.dCd;}}
   if(P.lockTimer>0){P.lockTimer-=tick;if(P.lockTimer<=0){P.locked=false;flushBuffer();}}
   if(P.swinging){P.swingTimer-=tick;if(P.swingTimer<=0)P.swinging=false;}
   // 평타 적중 대기 (0.2초 후 적중, 이동 시 취소)
@@ -1231,7 +1225,7 @@ function update(rdt){
   if(P.stackTimer>0){
     P.stackTimer-=tick;
     if(P.stackTimer<=0&&P.stacks>0){P.stacks=0;P.enhancedAA=false;updateStackUI();
-      document.getElementById('stack-full').style.display='none';log('스택 시간 만료')}
+      document.getElementById('stack-full').style.display='none';}
     else if(P.stacks>0&&P.stacks<CONF.stackMax){
       const pct=Math.max(0,P.stackTimer/CONF.stackDur)*100;
       document.getElementById('stack-indicator').style.setProperty('--p',pct+'%');
@@ -1240,7 +1234,7 @@ function update(rdt){
   if(P.qEnhTimer>0){
     P.qEnhTimer-=tick;
     if(P.qEnhTimer<=0&&P.qEnhanced){P.qEnhanced=false;
-      document.getElementById('bQ').classList.remove('enhanced');document.getElementById('qIcon').src='icon/shoqfix.png';log('강화Q 만료')}
+      document.getElementById('bQ').classList.remove('enhanced');document.getElementById('qIcon').src='icon/shoqfix.png';}
   }
 
   // Q casting (시전 중 이동 불가)
@@ -1327,14 +1321,12 @@ function update(rdt){
           d.eMark=true;d.eMarkTimer=CONF.eMarkDur;
           sfxEdaggerHit();
           p.eHit=true;
-          log('협상 적중! 슬로우 + 마크 부여');
           // Dagger behind enemy (delayed)
           const behind=Math.atan2(p.vy,p.vx);
           const edgX=d.x+Math.cos(behind)*1.2*PX, edgY=d.y+Math.sin(behind)*1.2*PX;
-          effects.push({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000}); // 단검 생성 시 제거
+          effects.push({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000});
           schedule(CONF.eDaggerDelay,()=>{
             spawnDagger(edgX,edgY);
-            log('협상 단검 생성 (적 뒤)');
           });
           p.life=0;
           break;
@@ -1845,7 +1837,7 @@ canvas.addEventListener('mousedown',e=>{
         const dd=dist(mouse,d);
         if(dd<bd){bd=dd;best=d}
       }
-      if(best){P.atkTarget=best;moveTarget=null;log('A+클릭 타겟 지정')}
+      if(best){P.atkTarget=best;moveTarget=null;}
     } else {
       doBasicAttack();
     }
