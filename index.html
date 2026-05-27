@@ -49,8 +49,8 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
 #cdr-ui{position:fixed;top:80px;right:8px;background:rgba(0,0,0,.6);padding:10px 14px;border-radius:6px;font-size:13px;user-select:none;z-index:20}
 #cdr-ui .label{color:#aaa;margin-bottom:6px}
 #cdr-ui .row{display:flex;align-items:center;gap:8px}
-#cdr-ui button{width:28px;height:28px;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-#cdr-ui button:hover{background:#333;border-color:#5af}
+#cdr-ui .row button{width:28px;height:28px;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#cdr-ui .row button:hover{background:#333;border-color:#5af}
 #cdr-ui .val{font-size:18px;font-weight:bold;color:#5af;min-width:50px;text-align:center}
 #cdr-ui .rate{font-size:12px;color:#f80;margin-top:4px;text-align:center}
 #cd-warning{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 0 4px #000,0 0 2px #000,1px 1px 0 #000;padding:4px 12px;pointer-events:none;opacity:0;transition:opacity .25s;z-index:100;white-space:nowrap}
@@ -93,15 +93,18 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
   <div style="font-size:11px"><label>TiltX(눕힘): <input type="range" id="cam-tx" min="-85" max="85" step="0.5" value="44.5" style="width:90px"><input type="number" id="cam-tx-num" step="0.5" value="44.5" style="width:55px"></label></div>
   <div style="font-size:11px"><label>TiltY: <input type="range" id="cam-ty" min="-85" max="85" step="0.5" value="0.5" style="width:90px"><input type="number" id="cam-ty-num" step="0.5" value="0.5" style="width:55px"></label></div>
   <div style="font-size:11px"><label>원근거리: <input type="range" id="cam-persp" min="100" max="8000" step="50" value="700" style="width:90px"><input type="number" id="cam-persp-num" step="50" value="700" style="width:60px"></label></div>
-  <div style="font-size:11px"><label>줌: <input type="range" id="cam-zoom" min="0.3" max="3" step="0.01" value="2" style="width:90px"><input type="number" id="cam-zoom-num" step="0.01" value="2" style="width:55px"></label></div>
+  <div style="font-size:11px"><label>줌: <input type="range" id="cam-zoom" min="0.3" max="3" step="0.01" value="1.57" style="width:90px"><input type="number" id="cam-zoom-num" step="0.01" value="1.57" style="width:55px"></label></div>
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="overlay-chk"> 원작 오버레이</label> <input type="range" id="overlay-a" min="0" max="1" step="0.05" value="0.4" style="width:60px;vertical-align:middle"></div>
+  <div style="margin-top:6px;border-top:1px solid #333;padding-top:6px;font-size:11px;color:#aaa">단검 외형 (공통)</div>
+  <div style="font-size:11px"><label>크기: <input type="range" id="dag-scale" min="0.5" max="2" step="0.01" value="1" style="width:90px"><input type="number" id="dag-scale-num" step="0.01" value="1" style="width:55px"></label></div>
+  <div style="font-size:11px"><label>Y찌부: <input type="range" id="dag-squish" min="0.3" max="1.5" step="0.01" value="1" style="width:90px"><input type="number" id="dag-squish-num" step="0.01" value="1" style="width:55px"></label></div>
   <div style="display:none" class="row">
     <button id="fps-down">-</button><span id="fps-val"></span><button id="fps-up">+</button>
   </div>
 </div>
 <div id="log"></div>
 <div id="canvas-wrap" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;z-index:1;"><canvas id="c"></canvas></div>
-<img id="ref-overlay" src="sprite/screenshot1.jpg" style="position:fixed;left:50%;top:0;transform:translateX(-50%);max-width:100vw;max-height:calc(100vh - 20px);pointer-events:none;z-index:30;opacity:.4;display:none">
+<img id="ref-overlay" src="sprite/screenshot1.jpg" style="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;pointer-events:none;opacity:.4;display:none;z-index:30">
 <div id="stack-indicator"><span class="icon"></span><span class="num" id="stack-num">0</span></div>
 <div id="hud">
   <div class="sk ready" id="bQ"><span class="key">Q</span><img class="icon-img" id="qIcon" src="icon/shoqfix.png"><div class="cd" id="cQ"></div></div>
@@ -128,7 +131,7 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
 // ============================================================
 // CONFIG
 // ============================================================
-const PX = 711 / 11;              // 1 meter = 64.6px (1920x1080 기준 711px = 11m)
+const PX = 770 / 11;              // 1 meter = 70px (1920x1080 기준 770px = 11m, 카티야 스킬 사거리 스크린샷 재측정)
 const FPS = 60;
 const dt = 1 / FPS;
 let tick = dt;
@@ -180,8 +183,12 @@ function recalcAs(){
 function getCdrRate(){ return (CDR_TABLE[cdrStat]||0) / 100; }
 function applyCdr(baseCd){ return cdResetMode ? 0 : baseCd * (1 - getCdrRate()); }
 
+// 카메라(1920×1080) 기준 이동속도: 1초에 3.76m (1m = 70 카메라픽셀)
+const CAMERA_REF_W = 1920;
+const PX_PER_METER = 70;             // 1m = 70px (1920 카메라 기준, PX와 동기화 / 카티야 스킬 사거리 재측정)
+const PLAYER_SPEED_MPS = 3.76;       // 1초당 3.76m
 const CONF = {
-  moveSpeed: 3.76 * PX,            // per second (프레임 독립)
+  moveSpeed: PLAYER_SPEED_MPS * PX_PER_METER,  // = 263.2 px/sec (1920 기준)
   atkRange: 1.65 * PX,
   atkCd: 1.0,                    // seconds (공속 하향)
 
@@ -203,7 +210,7 @@ const CONF = {
   qEnhHalfAngle: Math.PI/4.8,        // 부채꼴 반각 37.5° (총 75°)
 
   // W
-  wRange: 5 * PX,                // 5m
+  wRange: 5.5 * PX,              // 5.5m
   wDmg: 100,
   wWidth: 2.5 * PX,
   wCd: 12,
@@ -224,8 +231,9 @@ const CONF = {
   // R
   rInnerRadius: 178,              // 1920x1080 기준 178px
   rInnerDmg: 150,
-  rDaggerPathLen: 205,            // 인접 단검 간 290px (205*√2≈290)
-  rDaggerPathW: 0.8 * PX,
+  // 3.9m 방사 배치 → 인접 단검 간 252*√2≈356px≈5.5m = W 사거리 (W-연계 메커닉)
+  rDaggerPathLen: 252,            // 원작 3.9m (3.9*PX≈252px) — 단검 위치 = 경로 피해 길이
+  rDaggerPathW: 0.8 * PX,         // 원작 0.8m — 경로 피해 폭
   rDaggerDmg: 40,
   rCd: 60,
   rCastTime: 0.9,                // 선딜 0.3 + 후딜 0.6
@@ -251,7 +259,7 @@ const CONF = {
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let quarterView = true;
-const cam = { roll: -8, scaleY: 1.01, scaleX: 0.92, tiltX: 44.5, tiltY: 0.5, persp: 700, zoom: 2 };
+const cam = { roll: -8, scaleY: 1.01, scaleX: 0.92, tiltX: 44.5, tiltY: 0.5, persp: 700, zoom: 1.57 };
 function applyCamera(){
   if(quarterView){
     canvas.style.transform=`scale(${cam.zoom}) perspective(${cam.persp}px) rotateX(${cam.tiltX}deg) rotateY(${cam.tiltY}deg) rotate(${cam.roll}deg) scale(${cam.scaleX},${cam.scaleY})`;
@@ -260,34 +268,47 @@ function applyCamera(){
   }
 }
 applyCamera();
+
+// ── 좌표 투영: CSS perspective 변형의 정/역 ──
+function _wrapRect(){ return document.getElementById('canvas-wrap').getBoundingClientRect(); }
+function screenToWorld(clientX, clientY){
+  const r=_wrapRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  let xs=clientX-cx, ys=clientY-cy;
+  xs/=cam.zoom; ys/=cam.zoom;
+  if(quarterView){
+    const tx=cam.tiltX*Math.PI/180, ty=cam.tiltY*Math.PI/180, rr=cam.roll*Math.PI/180, d=cam.persp;
+    const cty=Math.cos(ty)||1e-6, ctx_=Math.cos(tx)||1e-6;
+    const A=ys*Math.tan(tx)-xs*Math.tan(ty)/ctx_;
+    const k=1+A/d;
+    const u=xs/(k*cty);
+    const v=(ys/k-u*Math.sin(ty)*Math.sin(tx))/ctx_;
+    const ux=u*Math.cos(rr)+v*Math.sin(rr);
+    const vy=-u*Math.sin(rr)+v*Math.cos(rr);
+    xs=ux/cam.scaleX; ys=vy/cam.scaleY;
+  }
+  const sxk=canvas.width/r.width, syk=canvas.height/r.height;
+  return { x: xs*sxk+canvas.width/2, y: ys*syk+canvas.height/2 };
+}
+
 // 내부 버퍼 해상도는 고정 → 렌더링 비용과 비율이 해상도 독립적으로 일관됨
-const DESIGN_W = 2400;
-const DESIGN_H_Q = 1600;  // 쿼터뷰
-const DESIGN_H_F = 1350;  // 평면
+const DESIGN_W = 1920;
+const DESIGN_H_Q = 1280;  // 쿼터뷰 (3:2)
+const DESIGN_H_F = 1080;  // 평면 (16:9)
+// 내부 캔버스는 항상 1920×1080(또는 1920×1280) 고정 → 게임 내 거리·크기는 해상도 무관 일정.
+// CSS 표시 크기만 현재 창에 맞춰 비례 축소/확대 (월드 좌표·물리 영향 없음).
 function fitCanvas() {
   const vw = window.innerWidth, vh = window.innerHeight - 20;
-  const s = Math.min(vw / canvas.width, vh / canvas.height);
-  canvas.style.width = (canvas.width * s) + 'px';
-  canvas.style.height = (canvas.height * s) + 'px';
-}
-// 그리드 오프스크린 캐시 (매 프레임 100+ stroke 호출 회피)
-const gridCanvas = document.createElement('canvas');
-const gridCtx = gridCanvas.getContext('2d');
-function renderGrid() {
-  gridCanvas.width = canvas.width;
-  gridCanvas.height = canvas.height;
-  gridCtx.strokeStyle = '#1a1a2a';
-  gridCtx.lineWidth = 1;
-  gridCtx.beginPath();
-  for (let x = 0; x < canvas.width; x += 40) { gridCtx.moveTo(x, 0); gridCtx.lineTo(x, canvas.height); }
-  for (let y = 0; y < canvas.height; y += 40) { gridCtx.moveTo(0, y); gridCtx.lineTo(canvas.width, y); }
-  gridCtx.stroke();
+  const scale = Math.min(vw / canvas.width, vh / canvas.height);
+  canvas.style.width = (canvas.width * scale) + 'px';
+  canvas.style.height = (canvas.height * scale) + 'px';
 }
 function resize() {
   canvas.width = DESIGN_W;
   canvas.height = quarterView ? DESIGN_H_Q : DESIGN_H_F;
+  // 카메라 너비가 1920에서 벗어나면 비례 보정 (1920에선 그대로 244 px/sec)
+  CONF.moveSpeed = PLAYER_SPEED_MPS * PX_PER_METER * (canvas.width / CAMERA_REF_W);
   fitCanvas();
-  renderGrid();
 }
 resize();
 window.addEventListener('resize', () => { fitCanvas(); });
@@ -737,10 +758,10 @@ function castW(){
       bestD=dm;bestTarget=d;bestType='enemy';
     }
   }
-  // Check daggers (단검 주위 원 범위까지 타겟팅 가능)
+  // Check daggers — mouse도 논리좌표이므로 dg 논리좌표와 직접 비교
   for(let i=0;i<daggers.length;i++){
     const dg=daggers[i];
-    const dm=dist(mouse,dg);
+    const dm=Math.hypot(mouse.x-dg.x,mouse.y-dg.y);
     if(dm<CONF.daggerPickupR+20 && dm<bestD){
       bestD=dm;bestTarget={...dg,idx:i};bestType='dagger';
     }
@@ -1005,29 +1026,35 @@ function castR(){
 
     xDirs.forEach((dir,i)=>{
       schedule(i*0.1,()=>{
-        const dx=Math.cos(dir.a), dy=Math.sin(dir.a);
+        // 단검 위치 = 피해 경로 끝 = 캐릭터로부터 3.9m 방사 (4개 등거리, W-연계 보존)
+        const wAng=dir.a;
+        let dgX=castX+Math.cos(wAng)*CONF.rDaggerPathLen;
+        let dgY=castY+Math.sin(wAng)*CONF.rDaggerPathLen;
 
         // 경로상 피해 (이미 맞은 대상 제외)
         for(const d of dummies){
           if(!d.alive||rHitSet.has(d))continue;
-          const ex=castX+dx*CONF.rDaggerPathLen, ey=castY+dy*CONF.rDaggerPathLen;
-          if(lineHitsCircle(castX,castY,ex,ey,d.x,d.y,d.r+CONF.rDaggerPathW/2)){
-            hitDummy(d,CONF.rDaggerDmg,dir.a,false);
+          if(lineHitsCircle(castX,castY,dgX,dgY,d.x,d.y,d.r+CONF.rDaggerPathW/2)){
+            hitDummy(d,CONF.rDaggerDmg,wAng,false);
             rAnyHit=true;
             rHitAll.add(d);
           }
         }
 
-        // 단검 배치 (벽 차단 시 발밑)
-        let dgX=castX+dx*CONF.rDaggerPathLen, dgY=castY+dy*CONF.rDaggerPathLen;
+        // 벽 차단 시 발밑 방향으로
         if(wallBlock(dgX,dgY,5)){
-          dgX=castX+dx*15;dgY=castY+dy*15;
+          dgX=castX+Math.cos(wAng)*15;dgY=castY+Math.sin(wAng)*15;
         }
+        // R 방향별 사용자 오프셋
+        dgX += rDagVis[i].dx;
+        dgY += rDagVis[i].dy;
         spawnDagger(dgX,dgY);
+        // 방금 추가된 단검에 R 방향 인덱스 태그 — 렌더링에서 개별 찌부 적용
+        daggers[daggers.length-1].rIdx = i;
 
         // 슬래시 이펙트
         effects.push({type:'rslash',x1:castX,y1:castY,
-          x2:castX+dx*CONF.rDaggerPathLen,y2:castY+dy*CONF.rDaggerPathLen,
+          x2:dgX,y2:dgY,
           t:0,mt:20,w:CONF.rDaggerPathW});
 
         // 마지막 단검 배치 후 R hit/miss 사운드
@@ -1403,8 +1430,13 @@ function draw(){
   ctx.translate(shake.x,shake.y);
   ctx.clearRect(-10,-10,canvas.width+20,canvas.height+20);
 
-  // Grid (오프스크린 캐시)
-  ctx.drawImage(gridCanvas, 0, 0);
+  // Grid (전체 캔버스 절차적 렌더링)
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x <= canvas.width; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+  for (let y = 0; y <= canvas.height; y += 40) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
+  ctx.stroke();
 
 
   // Move target
@@ -1418,15 +1450,31 @@ function draw(){
   // ---- DAGGERS on field ----
   for(const dg of daggers){
     const pulse=Math.sin(dg.age*4)*.15+.85;
-    // W 사거리 원 (스트로크만)
-    ctx.strokeStyle='rgba(60,140,255,.08)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.arc(dg.x,dg.y,CONF.wRange,0,Math.PI*2);ctx.stroke();
-    // 원형 범위 (파란색, 굵은 스트로크)
-    ctx.strokeStyle='rgba(60,130,255,.35)';ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.arc(dg.x,dg.y,CONF.daggerPickupR,0,Math.PI*2);ctx.stroke();
-    // 단검 (빨간색)
     ctx.save();
     ctx.translate(dg.x,dg.y);
+    const _sq = (dg.rIdx!=null) ? rDagVis[dg.rIdx].squish : dagVis.squish;
+    ctx.scale(dagVis.scale, dagVis.scale*_sq);
+    // W 사거리 원
+    ctx.strokeStyle='rgba(60,140,255,.08)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(0,0,CONF.wRange,0,Math.PI*2);ctx.stroke();
+    // 원형 범위 (파란색)
+    ctx.strokeStyle='rgba(60,130,255,.35)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(0,0,CONF.daggerPickupR,0,Math.PI*2);ctx.stroke();
+    // 수직 빔 (원작 비콘)
+    {
+      const beamH=100;
+      const bg=ctx.createLinearGradient(0,0,0,-beamH);
+      bg.addColorStop(0,`rgba(255,60,60,${0.75*pulse})`);
+      bg.addColorStop(0.5,`rgba(255,40,40,${0.35*pulse})`);
+      bg.addColorStop(1,'rgba(255,40,40,0)');
+      ctx.fillStyle=bg;
+      ctx.shadowColor='#f33';ctx.shadowBlur=10;
+      ctx.fillRect(-3,-beamH,6,beamH);
+      ctx.fillStyle=`rgba(255,90,90,${0.5*pulse})`;
+      ctx.beginPath();ctx.ellipse(0,0,7,3,0,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+    }
+    // 단검 마커 (빨간색)
     ctx.rotate(dg.age*2);
     ctx.fillStyle=`rgba(220,50,50,${pulse})`;
     ctx.shadowColor='#f44';ctx.shadowBlur=8;
@@ -1497,6 +1545,7 @@ function draw(){
 
   // ---- PLAYER ----
   const px=P.x, py=P.y;
+  ctx.save();
 
   // R casting indicator
   if(P.rCasting){
@@ -1593,6 +1642,37 @@ function draw(){
 
   // Stack orbs around player (deprecated — stack UI는 #stack-indicator로 대체)
 
+  // ---- 패시브 스택 바 (체력바 아래 위치, 원작 ER 스타일 5분할) ----
+  {
+    const stacks = P.stacks, smax = CONF.stackMax;
+    const barW = 78, barH = 6, gap = 1.5;
+    const segW = (barW - gap*(smax-1)) / smax;
+    const bx = px - barW/2;
+    const by = py - P.r - 16;
+    const isMax = stacks >= smax;
+    // 외곽 박스 (살짝 어두운 배경 + 1px 테두리)
+    ctx.fillStyle='rgba(0,0,0,0.65)';
+    ctx.fillRect(bx-1.5, by-1.5, barW+3, barH+3);
+    // 5분할 세그먼트
+    for(let i=0;i<smax;i++){
+      const sx = bx + i*(segW+gap);
+      if(i<stacks){
+        ctx.fillStyle = isMax ? '#e63232' : '#f2f2f2';
+      } else {
+        ctx.fillStyle = 'rgba(50,50,55,0.85)';
+      }
+      ctx.fillRect(sx, by, segW, barH);
+    }
+    // MAX 상태 강조 글로우
+    if(isMax){
+      ctx.shadowColor='#ff3030';ctx.shadowBlur=8;
+      ctx.strokeStyle='rgba(255,80,80,0.85)';ctx.lineWidth=1;
+      ctx.strokeRect(bx-1.5, by-1.5, barW+3, barH+3);
+      ctx.shadowBlur=0;
+    }
+  }
+
+  ctx.restore();
   ctx.globalAlpha=1;
 
   // ---- EFFECTS ----
@@ -1611,7 +1691,8 @@ function draw(){
       ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
     }else if(e.type==='rect'){
       const r=parseInt(e.col.slice(1,3),16),g=parseInt(e.col.slice(3,5),16),b=parseInt(e.col.slice(5,7),16);
-      ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a);
+      ctx.save();
+      ctx.translate(e.x,e.y);ctx.rotate(e.a);
       ctx.fillStyle=`rgba(${r},${g},${b},${a*.3})`;
       ctx.fillRect(-e.len/2,-e.w/2,e.len,e.w);
       ctx.strokeStyle=`rgba(${r},${g},${b},${a*.7})`;ctx.lineWidth=3;
@@ -1638,7 +1719,6 @@ function draw(){
     }else if(e.type==='dagdrop'){
       // 적에서 천천히 나와 착지점에 도달
       const now=performance.now();
-      const totalMs=e.spawnTime-(e.spawnTime-600); // 항상 600ms
       const rp=Math.min((now-(e.spawnTime-600))/600,1);
       const tp=Math.min(rp/0.8,1); // 80% 시간에 도착
       const ease=1-Math.pow(1-tp,2);
@@ -1708,23 +1788,28 @@ function draw(){
   // W target highlight (show what W would target)
   if(P.wCd<=0&&!P.dashing&&!P.rCasting){
     // Find best W target near mouse
-    let best=null,bd=Infinity,btype='';
+    let best=null,bd=Infinity,bvx=0,bvy=0;
     for(const d of dummies){
       if(!d.alive)continue;
-      const dm=dist(mouse,d),dp=dist(P,d);
-      if(dm<d.r+30&&dp<=CONF.wRange&&dm<bd){bd=dm;best=d;btype='enemy'}
+      const dm=Math.hypot(mouse.x-d.x,mouse.y-d.y);
+      const dp=dist(P,d);
+      if(dm<d.r+30&&dp<=CONF.wRange&&dm<bd){
+        bd=dm;best=d;bvx=d.x;bvy=d.y;
+      }
     }
     for(const dg of daggers){
-      const dm=dist(mouse,dg),dp=dist(P,dg);
-      if(dm<30&&dp<=CONF.wRange&&dm<bd){bd=dm;best=dg;btype='dagger'}
+      const dm=Math.hypot(mouse.x-dg.x,mouse.y-dg.y);
+      const dp=dist(P,dg);
+      if(dm<30&&dp<=CONF.wRange&&dm<bd){
+        bd=dm;best=dg;bvx=dg.x;bvy=dg.y;
+      }
     }
     if(best){
       ctx.strokeStyle='rgba(80,200,255,.25)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-      ctx.beginPath();ctx.arc(best.x,best.y,20,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(bvx,bvy,20,0,Math.PI*2);ctx.stroke();
       ctx.setLineDash([]);
-      // Line from player
       ctx.strokeStyle='rgba(80,200,255,.1)';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(best.x,best.y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(P.x,P.y);ctx.lineTo(bvx,bvy);ctx.stroke();
     }
   }
 
@@ -1790,7 +1875,8 @@ document.addEventListener('mousemove',e=>{
   // CSS 픽셀 → 캔버스 버퍼 픽셀 변환 (해상도 독립)
   const sx = canvas.width / r.width, sy = canvas.height / r.height;
   xs *= sx; ys *= sy;
-  mouse.x=xs+canvas.width/2;mouse.y=ys+canvas.height/2;
+  mouse.x = xs + canvas.width/2;
+  mouse.y = ys + canvas.height/2;
   if(rightDown) handleRightClick(mouse.x,mouse.y);
 });
 document.addEventListener('mouseleave',()=>cursorEl.style.display='none');
@@ -1920,6 +2006,28 @@ bindCam('cam-zoom','cam-zoom-num','zoom',v=>v.toFixed(2));
 const refOv=document.getElementById('ref-overlay');
 document.getElementById('overlay-chk').addEventListener('change',e=>{refOv.style.display=e.target.checked?'block':'none';});
 document.getElementById('overlay-a').addEventListener('input',e=>{refOv.style.opacity=e.target.value;});
+
+// ── 단검 외형 설정 (크기, Y찌부) ──
+const dagVis = { scale:1, squish:1 };
+try{ const s=localStorage.getItem('dagVis'); if(s){ Object.assign(dagVis, JSON.parse(s)); } }catch(e){}
+function bindDag(rangeId, numId, key){
+  const r=document.getElementById(rangeId), n=document.getElementById(numId);
+  r.value=dagVis[key]; n.value=dagVis[key].toFixed(2);
+  const update=v=>{ dagVis[key]=v; r.value=v; n.value=v.toFixed(2);
+    try{ localStorage.setItem('dagVis', JSON.stringify(dagVis)); }catch(e){} };
+  r.addEventListener('input',e=>update(parseFloat(e.target.value)));
+  n.addEventListener('input',e=>{const v=parseFloat(e.target.value);if(!isNaN(v))update(v);});
+}
+bindDag('dag-scale','dag-scale-num','scale');
+bindDag('dag-squish','dag-squish-num','squish');
+
+// ── R(궁) 단검 방향별 시각 보정값 (좌하/우하/우상/좌상, xDirs 순서) ──
+const rDagVis = [
+  {dx: 30, dy:  7, squish:0.88},  // 좌하
+  {dx:-40, dy:  0, squish:1   },  // 우하
+  {dx:-25, dy: 50, squish:1   },  // 우상
+  {dx: 30, dy: 56, squish:1   },  // 좌상
+];
 
 (()=>{const m=document.getElementById('credit-modal');
 document.getElementById('credit').addEventListener('click',()=>m.classList.add('show'));
