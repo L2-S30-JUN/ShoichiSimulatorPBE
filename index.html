@@ -113,7 +113,7 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
     <button id="fps-down">-</button><span id="fps-val"></span><button id="fps-up">+</button>
   </div>
 </div>
-<div id="rdag-ui"><div class="rd-title" id="rdag-title">R 단검 개별 조정 ▾</div><div id="rdag-body"></div><button id="rdag-reset">기본값 복원</button></div>
+<div id="rdag-ui"><div class="rd-title" id="rdag-title">W 사거리 원 외형 ▾</div><div id="rdag-body"></div><button id="rdag-reset">기본값 복원</button></div>
 <div id="log"></div>
 <div id="canvas-wrap" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;z-index:1;"><canvas id="c"></canvas></div>
 <img id="ref-overlay" src="sprite/screenshot1.jpg" style="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;pointer-events:none;opacity:.4;display:none;z-index:30">
@@ -199,9 +199,17 @@ function applyCdr(baseCd){ return cdResetMode ? 0 : baseCd * (1 - getCdrRate());
 const CAMERA_REF_W = 1920;
 const PX_PER_METER = 70;             // 1m = 70px (1920 카메라 기준, PX와 동기화 / 카티야 스킬 사거리 재측정)
 const PLAYER_SPEED_MPS = 3.5;        // 1초당 3.5m
-// E 넉백 2구간(감속 꼬리): 1구간(7.5m/s, 1.25m) 종료 후 0.05m를 ease-out으로 후퇴, 총 50프레임(0.833s)에 종료
-const E_HOP2_DUR = 25/60;            // 0.417s (1구간 종료 0.417s → 50프레임 0.833s)
-const E_HOP2_DIST = 0.05 * PX;       // 남은 0.05m
+// E 넉백 속도 프로파일: 가속(ease-in 0→7.5m/s, 0.2m) → 순항(등속 7.5m/s, 1.2m) → 감속 꼬리(ease-out 7.5→0, 0.3m) = 총 1.7m
+// 정점 7.5m/s에서 각 구간 속도가 연속이라 끊김 없이 자연스러운 가속→감속.
+const EHOP_PEAK      = 7.5;                  // 정점/순항 속도 (m/s)
+const E_HOP_ACC_DIST = 0.2 * PX;             // 가속 구간 거리
+const E_HOP_ACC_DUR  = 2*0.2/EHOP_PEAK;      // ≈0.0533s (ease-in이라 평균=정점/2)
+const E_HOP_CRZ_DIST = 1.2 * PX;             // 순항 구간 거리
+const E_HOP_CRZ_DUR  = 1.2/EHOP_PEAK;        // =0.16s
+const E_HOP1_DIST    = E_HOP_ACC_DIST + E_HOP_CRZ_DIST; // 가속+순항 합 (1.4m)
+const E_HOP1_DUR     = E_HOP_ACC_DUR + E_HOP_CRZ_DUR;   // eHopActive(가속+순항) 지속 ≈0.213s
+const E_HOP2_DIST    = 0.3 * PX;             // 감속 꼬리 거리
+const E_HOP2_DUR     = 2*0.3/EHOP_PEAK;      // =0.08s (ease-out, 7.5→0)
 const CONF = {
   moveSpeed: PLAYER_SPEED_MPS * PX_PER_METER,  // = 263.2 px/sec (1920 기준)
   atkRange: 1.65 * PX,
@@ -470,6 +478,8 @@ const P = {
   qCasting: false, qCastTimer: 0,
   // E casting (1초 시전, 0.3초 후 스킬 캔슬 가능)
   eCasting: false, eCastTimer: 0, eCanCancel: false, eHopActive: false, eHopTimer: 0, eHopA: 0,
+  eHopElapsed: 0, eHopDone: 0,                        // E 넉백 1구간(가속+순항) 진행 상태
+  eMoveLockTimer: 0,                                  // E 입력 후 이동 잠금(넉백 모션과 별개, 0.8s까지 이동 무시·선입력은 허용)
   eHop2Active: false, eHop2Elapsed: 0, eHop2Done: 0,  // E 넉백 2구간(감속 꼬리)
   ewbCancelReady: false,  // E를 W/블링크로 캔슬 가능해지는 시점(20프레임) 도달 여부
   _eCastId: 0,
@@ -552,8 +562,11 @@ function pickupDagger(idx){
 // Check if player walks near daggers
 function checkDaggerPickup(){
   if(P.rCasting)return;
+  // 캐릭터 본체(P.r)가 화면에 표시되는 파란 원(반지름 = daggerPickupR×dagVis.scale)에 닿으면 줍기.
+  // 두 원이 외접하는 거리 = 파란원 반지름 + 캐릭터 반지름.
   for(let i=daggers.length-1;i>=0;i--){
-    if(dist(P,daggers[i])<CONF.daggerPickupR+10){
+    const ringR = CONF.daggerPickupR * dagVis.scale;
+    if(dist(P,daggers[i]) < ringR + P.r){
       pickupDagger(i);
     }
   }
@@ -809,7 +822,7 @@ function castW(){
     // 범위 안 → E 진행 중이면 E 캔슬 후 즉시 W (느린 EW: E 20프레임 마크 이후 W 입력)
     if(P.eCasting){
       cancelScheduledByTag('E');
-      P.eCasting=false;P.eCanCancel=false;P.eHopActive=false;P.eCastTimer=0;P.eHopTimer=0;
+      P.eCasting=false;P.eCanCancel=false;P.eHopActive=false;P.eHop2Active=false;P.eCastTimer=0;P.eHopTimer=0;P.eMoveLockTimer=0;
     }
     executeW(bestTarget,bestType);
   } else {
@@ -948,11 +961,10 @@ function castE(){
     if(!cdResetMode)return;
     cancelScheduledByTag('E');P.eCasting=false;P.eCastTimer=0;P.eCanCancel=false;P.eHopActive=false;
   }
-  // 타이밍: 0.25s 선딜 → 1구간 후퇴(10프레임=10/60s, 7.5m/s로 1.25m) → 2구간 감속 꼬리(0.05m, ~0.42s) → 50프레임(0.833s) 종료
-  const E_HOP_DELAY = 0.25;
-  const E_HOP_DUR = 10/60;
-  const E_TOTAL = E_HOP_DELAY + E_HOP_DUR; // ≈ 0.417s (eCasting/조작잠금은 여기서 해제, 감속 꼬리는 별도로 0.833s까지)
-  const EWB_CANCEL_DELAY = 19/60; // W/블링크로 E 캔슬 가능 시점: E 입력 후 19프레임 (Q는 eCanCancel 15f 유지)
+  // 타이밍: 0.2s 선딜(넉백 시작) → 가속+순항(1구간, 1.4m, ≈0.213s) → 감속 꼬리(2구간, 0.3m, 0.08s) → 총 1.7m
+  const E_HOP_DELAY = 0.2;
+  const E_TOTAL = E_HOP_DELAY + E_HOP1_DUR; // ≈0.413s (eCasting/조작잠금 해제, 감속 꼬리는 이후 별도 진행)
+  const EWB_CANCEL_DELAY = 20/60; // W/블링크로 E 캔슬 가능 시점: E 입력 후 20프레임 (Q는 eCanCancel 15f 유지)
   P.eInternalCd=E_TOTAL;
   P.atkWindup=false;P.atkWindupTarget=null;cancelAttack();
   const a=ang(P,mouse);
@@ -961,21 +973,22 @@ function castE(){
 
   P.eCasting=true;
   P.eCastTimer=E_TOTAL;
-  P.eHopTimer=0;
+  P.eHopElapsed=0;P.eHopDone=0;
   P.eCanCancel=false;
   P.eHopA=a;
   P.eHopActive=false;
   P.eHop2Active=false;P.eHop2Elapsed=0;P.eHop2Done=0;
   P.ewbCancelReady=false;
+  P.eMoveLockTimer=0.8;   // E 입력 후 0.8초까지 이동 명령 무시(넉백 모션은 ~0.49s에 끝나도 이동은 잠금, 선입력은 가능)
   moveTarget=null;
   P.atkTarget=null;P.wAutoTarget=null;
   schedule(E_HOP_DELAY,()=>{P.eCanCancel=true;},'E'); // 넉백 시작 시점에 캔슬 가능(Q/R)
-  // W/블링크 캔슬: E 입력 후 20프레임부터 가능. 버퍼돼 있으면 즉시 발사, 없으면 이후 입력 시 발사
+  // W/블링크 캔슬: E 입력 후 20프레임부터 가능. 버퍼돼 있으면 발사.
+  // E 캔슬은 여기서 미리 하지 않고 castW(사거리 내 대상이 있을 때만)·castBlink가 직접 수행한다.
+  // → 맨땅 W(대상 없음)나 사거리 밖 W에서는 넉백이 끊기지 않고 그대로 진행됨.
   schedule(EWB_CANCEL_DELAY,()=>{
     P.ewbCancelReady=true;
     if(skillBuffer===castW||skillBuffer===castBlink){
-      cancelScheduledByTag('E');
-      P.eCasting=false;P.eCanCancel=false;P.eHopActive=false;P.eHop2Active=false;P.eCastTimer=0;P.eHopTimer=0;
       flushBuffer();
     }
   },'E');
@@ -1009,7 +1022,7 @@ function castE(){
       }
     }
     if(!eProj.eHit) projectiles.push(eProj);
-    if(P.eCasting){P.eHopActive=true;P.eHopTimer=E_HOP_DUR;}
+    if(P.eCasting){P.eHopActive=true;P.eHopElapsed=0;P.eHopDone=0;}
   },'E');
 
   P.eCd=applyCdr(CONF.eCd);
@@ -1147,7 +1160,7 @@ function castBlink(){
   if(P.eCasting||P.eHopActive||P.eHop2Active){
     cancelScheduledByTag('E');
     P.eCasting=false;P.eCanCancel=false;P.eHopActive=false;P.eHop2Active=false;
-    P.eCastTimer=0;P.eHopTimer=0;P._eCastId++;
+    P.eCastTimer=0;P.eHopTimer=0;P.eMoveLockTimer=0;P._eCastId++;
   }
   sfxBlink();
   cancelAttack();
@@ -1184,7 +1197,7 @@ let dPending=null;
 let dPendingInstant=false; // E 중 눌렀을 때 범위 내였는지 기록 (E 종료 후 범위 재검사 없이 발동)
 function executeD(tgt){
   if(P.eCasting){P.eCasting=false;P.eCanCancel=false;P.eHopActive=false;P._eCastId++;}
-  P.eHop2Active=false;
+  P.eHop2Active=false;P.eMoveLockTimer=0;
   P.atkWindup=false;P.atkWindupTarget=null;cancelAttack();
   const behindA=-Math.PI/3;
   P.x=tgt.x+Math.cos(behindA)*80;
@@ -1324,28 +1337,48 @@ function update(rdt){
   // Q casting (시전 중 이동 불가)
   if(P.qCasting){
     P.qCastTimer-=tick;
-    if(P.qCastTimer<=0){P.qCasting=false;flushBuffer();}
+    if(P.qCastTimer<=0){
+      P.qCasting=false;
+      // EQ/EQ2: Q 시전이 끝나면 남아있는 E 넉백(순항 잔여 + 감속 꼬리)이 이동을 막지 않도록 정리한다.
+      // (가속+순항으로 이미 대부분 밀려난 상태. flushBuffer 전에 처리해야 QE의 버퍼된 E를 지우지 않음)
+      if(P.eCasting||P.eHopActive||P.eHop2Active||P.eMoveLockTimer>0){
+        cancelScheduledByTag('E');
+        P.eCasting=false;P.eCanCancel=false;P.eHopActive=false;P.eHop2Active=false;P.eCastTimer=0;P.eHopTimer=0;P.eMoveLockTimer=0;
+      }
+      flushBuffer();
+    }
   }
 
-  // E casting: 0.25s 선딜 → 1구간 후퇴(7.5m/s, 1.25m) → 2구간 감속 꼬리(0.05m), 총 50프레임에 종료
+  // E 이동 잠금 타이머 (넉백 모션과 별개로, E 입력 후 0.8초까지 이동만 차단)
+  if(P.eMoveLockTimer>0)P.eMoveLockTimer-=tick;
+  // E casting: 0.2s 선딜 → 1구간 가속(ease-in)+순항(등속) → 2구간 감속 꼬리(ease-out), 총 1.7m
   if(P.eCasting){
     P.eCastTimer-=tick;
     if(P.eHopActive){
-      P.eHopTimer-=tick;
-      if(P.eHopTimer<=0){
-        P.eHopActive=false;
-        // 1구간 종료 → 2구간(감속 꼬리) 시작
-        P.eHop2Active=true;P.eHop2Elapsed=0;P.eHop2Done=0;
+      P.eHopElapsed+=tick;
+      let target;
+      if(P.eHopElapsed<=E_HOP_ACC_DUR){
+        // 가속: 0 → 정점, ease-in (위치 = 거리·p²)
+        const p=P.eHopElapsed/E_HOP_ACC_DUR;
+        target=E_HOP_ACC_DIST*p*p;
       } else {
-        const hopSpeed=7.5*PX*tick;
-        const nx=P.x-Math.cos(P.eHopA)*hopSpeed;
-        const ny=P.y-Math.sin(P.eHopA)*hopSpeed;
-        if(!wallBlock(nx,ny,P.r)){P.x=nx;P.y=ny}
+        // 순항: 정점 속도 등속
+        target=E_HOP_ACC_DIST + EHOP_PEAK*PX*(P.eHopElapsed-E_HOP_ACC_DUR);
+      }
+      if(target>E_HOP1_DIST) target=E_HOP1_DIST;
+      const delta=target-P.eHopDone;P.eHopDone=target;
+      const nx=P.x-Math.cos(P.eHopA)*delta;
+      const ny=P.y-Math.sin(P.eHopA)*delta;
+      if(!wallBlock(nx,ny,P.r)){P.x=nx;P.y=ny}
+      if(P.eHopElapsed>=E_HOP1_DUR){
+        P.eHopActive=false;
+        // 1구간(가속+순항) 종료 → 2구간(감속 꼬리) 시작 (정점 속도에서 연속)
+        P.eHop2Active=true;P.eHop2Elapsed=0;P.eHop2Done=0;
       }
     }
     if(P.eCastTimer<=0){P.eCasting=false;P.eCanCancel=false;P.eHopActive=false}
   }
-  // E 넉백 2구간(감속 꼬리): eCasting 종료(0.417s) 후에도 독립적으로 진행, 총 50프레임(0.833s)에 마무리
+  // E 넉백 2구간(감속 꼬리): eCasting 종료 후에도 독립적으로 진행, 정점 7.5m/s에서 0까지 ease-out으로 0.3m 후퇴
   if(P.eHop2Active){
     P.eHop2Elapsed+=tick;
     const p=Math.min(P.eHop2Elapsed/E_HOP2_DUR,1);
@@ -1380,7 +1413,7 @@ function update(rdt){
   processAutoAttack();
 
   // Movement (이동은 대시/시전/Q시전/E시전 중 차단)
-  if(!P.dashing&&!P.rCasting&&!P.hopping&&!P.eCasting&&!P.eHop2Active&&!P.qCasting&&moveTarget){
+  if(!P.dashing&&!P.rCasting&&!P.hopping&&!P.eCasting&&!P.eHop2Active&&P.eMoveLockTimer<=0&&!P.qCasting&&moveTarget){
     if(P.atkPending) cancelAttack(); // 이동 시 평타 취소
     const d=dist(P,moveTarget);
     if(d<4){moveTarget=null}
@@ -1524,11 +1557,16 @@ function draw(){
     const pulse=Math.sin(dg.age*4)*.15+.85;
     ctx.save();
     ctx.translate(dg.x,dg.y);
+    // W 사거리 원 (얇은 파란색 타원) — R 단검 방향별 설정. 비R 단검은 좌하(0) 설정을 사용
+    {
+      const wv = wRingVis[(dg.rIdx!=null)?dg.rIdx:0];
+      const wrx = CONF.wRange*wv.scale;
+      const wry = wrx*wv.flatten;
+      ctx.strokeStyle='rgba(60,140,255,.08)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.ellipse(0,0, wrx, wry, wv.angle*Math.PI/180, 0, Math.PI*2);ctx.stroke();
+    }
     const _sq = (dg.rIdx!=null) ? rDagVis[dg.rIdx].squish : dagVis.squish;
     ctx.scale(dagVis.scale, dagVis.scale*_sq);
-    // W 사거리 원
-    ctx.strokeStyle='rgba(60,140,255,.08)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.arc(0,0,CONF.wRange,0,Math.PI*2);ctx.stroke();
     // 원형 범위 (파란색)
     ctx.strokeStyle='rgba(60,130,255,.35)';ctx.lineWidth=2.5;
     ctx.beginPath();ctx.arc(0,0,CONF.daggerPickupR,0,Math.PI*2);ctx.stroke();
@@ -2091,6 +2129,20 @@ document.getElementById('overlay-a').addEventListener('input',e=>{refOv.style.op
 // ── 단검 외형 설정 (크기, Y찌부) ──
 const dagVis = { scale:1, squish:1 };
 try{ const s=localStorage.getItem('dagVis'); if(s){ Object.assign(dagVis, JSON.parse(s)); } }catch(e){}
+// ── 단검 W 사거리 원(얇은 파란색 타원) 외형 — R 단검 방향별(좌하/우하/우상/좌상, rIdx 순서) ──
+//  scale  : 가로 반지름 배율 (CONF.wRange 기준)
+//  flatten: 세로/가로 비율 (1=정원, 작을수록 납작) — 카메라 원근 위에 추가로 눌러 원작의 납작함을 맞춤
+//  angle  : 캔버스 공간에서의 기울기(도)
+const WRING_DEFAULT = { scale:1, flatten:1, angle:0 };
+const wRingVis = [0,1,2,3].map(()=>({...WRING_DEFAULT}));
+try{
+  const s=localStorage.getItem('wRingVis');
+  if(s){
+    const data=JSON.parse(s);
+    if(Array.isArray(data)){ data.forEach((o,i)=>{ if(wRingVis[i]) Object.assign(wRingVis[i],o); }); }
+    else { wRingVis.forEach(o=>Object.assign(o,data)); } // 구버전(단일 객체) 호환
+  }
+}catch(e){}
 function bindDag(rangeId, numId, key){
   const r=document.getElementById(rangeId), n=document.getElementById(numId);
   r.value=dagVis[key]; n.value=dagVis[key].toFixed(2);
@@ -2112,43 +2164,42 @@ const RDAG_DEFAULT = [
 const rDagVis = RDAG_DEFAULT.map(o=>({...o}));
 try{ const s=localStorage.getItem('rDagVis'); if(s){ const arr=JSON.parse(s); arr.forEach((o,i)=>{ if(rDagVis[i]) Object.assign(rDagVis[i], o); }); } }catch(e){}
 
-// ── R 단검 개별 조정 UI (좌측 패널) ──
+// ── W 사거리 원(얇은 파란색 타원) 외형 조정 UI — R 단검 방향별 (좌측 패널) ──
 (function(){
   const dirs=['좌하','우하','우상','좌상'];
   const body=document.getElementById('rdag-body');
   const fields=[
-    {key:'dx',     label:'X',  min:-150, max:150, step:1,    float:false},
-    {key:'dy',     label:'Y',  min:-150, max:150, step:1,    float:false},
-    {key:'squish', label:'찌부', min:0.3,  max:1.5, step:0.01, float:true },
+    {key:'scale',   label:'가로', min:0.3,  max:3,  step:0.01},
+    {key:'flatten', label:'납작', min:0.15, max:1,  step:0.01},
+    {key:'angle',   label:'각도', min:-180, max:180, step:0.5 },
   ];
-  const save=()=>{ try{ localStorage.setItem('rDagVis', JSON.stringify(rDagVis)); }catch(e){} };
+  const save=()=>{ try{ localStorage.setItem('wRingVis', JSON.stringify(wRingVis)); }catch(e){} };
   const refreshers=[];
   dirs.forEach((name,i)=>{
     const grp=document.createElement('div'); grp.className='rd-grp';
     const t=document.createElement('div'); t.className='rd-dir'; t.textContent=name; grp.appendChild(t);
     fields.forEach(f=>{
       const lab=document.createElement('label');
-      const sp=document.createElement('span'); sp.textContent=f.label; lab.appendChild(sp);
+      const sp=document.createElement('span'); sp.textContent=f.label; sp.style.width='32px'; lab.appendChild(sp);
       const r=document.createElement('input'); r.type='range'; r.min=f.min; r.max=f.max; r.step=f.step;
       const n=document.createElement('input'); n.type='number'; n.step=f.step;
-      const setDisp=v=>{ r.value=v; n.value=f.float?v.toFixed(2):v; };
-      setDisp(rDagVis[i][f.key]);
-      const upd=v=>{ rDagVis[i][f.key]=v; setDisp(v); save(); };
+      const setDisp=v=>{ r.value=v; n.value=(f.step<1?v.toFixed(2):v); };
+      setDisp(wRingVis[i][f.key]);
+      const upd=v=>{ wRingVis[i][f.key]=v; setDisp(v); save(); };
       r.addEventListener('input',e=>upd(parseFloat(e.target.value)));
       n.addEventListener('input',e=>{const x=parseFloat(e.target.value); if(!isNaN(x))upd(x);});
       lab.appendChild(r); lab.appendChild(n); grp.appendChild(lab);
-      refreshers.push(()=>setDisp(rDagVis[i][f.key]));
+      refreshers.push(()=>setDisp(wRingVis[i][f.key]));
     });
     body.appendChild(grp);
   });
   document.getElementById('rdag-reset').addEventListener('click',()=>{
-    RDAG_DEFAULT.forEach((o,i)=>Object.assign(rDagVis[i],o));
-    save(); refreshers.forEach(fn=>fn());
+    wRingVis.forEach(o=>Object.assign(o, WRING_DEFAULT)); save(); refreshers.forEach(fn=>fn());
   });
   const panel=document.getElementById('rdag-ui'), title=document.getElementById('rdag-title');
   title.addEventListener('click',()=>{
     panel.classList.toggle('collapsed');
-    title.textContent='R 단검 개별 조정 '+(panel.classList.contains('collapsed')?'▸':'▾');
+    title.textContent='W 사거리 원 외형 '+(panel.classList.contains('collapsed')?'▸':'▾');
   });
 })();
 
