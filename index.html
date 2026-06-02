@@ -97,6 +97,8 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
   <div style="margin-top:6px;font-size:12px"><label><input type="checkbox" id="bisaek-chk"> 비색단검 (공속 +0.21)</label></div>
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="shake-chk" checked> 화면 흔들림</label></div>
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="quarter-chk" checked> 쿼터뷰</label></div>
+  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="wviz-chk"> W 범위 시각화 (비약/회수)</label></div>
+  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="cursor-chk" checked> 커스텀 커서</label></div>
   <div style="margin-top:6px;border-top:1px solid #333;padding-top:6px;font-size:11px;color:#aaa">카메라 조정</div>
   <div style="font-size:11px"><label>Roll(Z): <input type="range" id="cam-roll" min="-180" max="180" step="0.5" value="-8" style="width:90px"><input type="number" id="cam-roll-num" step="0.5" value="-8" style="width:55px"></label></div>
   <div style="font-size:11px"><label>PitchY: <input type="range" id="cam-sy" min="0.05" max="2" step="0.01" value="1.01" style="width:90px"><input type="number" id="cam-sy-num" step="0.01" value="1.01" style="width:55px"></label></div>
@@ -113,7 +115,6 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
     <button id="fps-down">-</button><span id="fps-val"></span><button id="fps-up">+</button>
   </div>
 </div>
-<div id="rdag-ui"><div class="rd-title" id="rdag-title">W 사거리 원 외형 ▾</div><div id="rdag-body"></div><button id="rdag-reset">기본값 복원</button></div>
 <div id="log"></div>
 <div id="canvas-wrap" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;z-index:1;"><canvas id="c"></canvas></div>
 <img id="ref-overlay" src="sprite/screenshot1.jpg" style="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;pointer-events:none;opacity:.4;display:none;z-index:30">
@@ -395,6 +396,16 @@ function ptInRect(px,py,cx,cy,a,hw,hh){
   const lx=dx*c+dy*s;
   const ly=-dx*s+dy*c;
   return Math.abs(lx)<=hw && Math.abs(ly)<=hh;
+}
+// 반지름 r인 원이 회전 사각형(중심 cx,cy / 각도 a / 반치수 hw,hh)에 닿는가
+function circleHitsRect(px,py,cx,cy,a,hw,hh,r){
+  const dx=px-cx,dy=py-cy;
+  const c=Math.cos(a),s=Math.sin(a);
+  const lx=dx*c+dy*s;
+  const ly=-dx*s+dy*c;
+  const ddx=Math.max(Math.abs(lx)-hw,0);
+  const ddy=Math.max(Math.abs(ly)-hh,0);
+  return ddx*ddx+ddy*ddy<=r*r;
 }
 function ptInFan(px,py,cx,cy,a,r,halfAng,objR){
   const d=Math.hypot(px-cx,py-cy);
@@ -913,14 +924,36 @@ function executeWTeleport(){
   const wPathDx=P.x-startX, wPathDy=P.y-startY;
   const wPathLen=Math.hypot(wPathDx,wPathDy);
   if(wPathLen>0){
-    const wPathCx=(startX+P.x)/2, wPathCy=(startY+P.y)/2;
+    const dirx=wPathDx/wPathLen, diry=wPathDy/wPathLen; // 도약 방향
     const wPathA=Math.atan2(wPathDy,wPathDx);
-    const wHalfLong=wPathLen/2+CONF.daggerPickupR*1.5; // 가로: 경로+여유
-    const wHalfShort=CONF.daggerPickupR*2;                // 세로: 단검 반지름의 2배
+    const frontMargin=CONF.daggerPickupR*1.5;
+    // 회수 사각형은 원래 대칭형(옆/앞 범위 그대로). 뒤쪽 컷은 사각형이 아니라 별도 평면으로 처리.
+    const wPathCx=(startX+P.x)/2, wPathCy=(startY+P.y)/2;
+    const wHalfLong=wPathLen/2+frontMargin; // 가로: 경로+앞여유
+    const wHalfShort=CONF.daggerPickupR*2;   // 세로: 단검 반지름의 2배
+    // 판정: 단검 중심점이 아니라 단검의 파란 원(반지름 blueR)이 사각형에 닿으면 회수.
+    //  파란 원 크기만큼 사각형을 줄여(blueR), 실효 범위는 (중심점 in 사각형)과 동일하게 유지.
+    const blueR=CONF.daggerPickupR*dagVis.scale;
+    const hwS=Math.max(wHalfLong-blueR,0), hhS=Math.max(wHalfShort-blueR,0);
     for(let i=daggers.length-1;i>=0;i--){
-      if(ptInRect(daggers[i].x,daggers[i].y,wPathCx,wPathCy,wPathA,wHalfLong,wHalfShort)){
+      // 시작점(캐릭터)보다 도약 방향 뒤쪽에 중심이 있는 단검만 제외 (시작점에서 평평하게 컷, 옆쪽은 그대로)
+      if((daggers[i].x-startX)*dirx+(daggers[i].y-startY)*diry < 0) continue;
+      if(circleHitsRect(daggers[i].x,daggers[i].y,wPathCx,wPathCy,wPathA,hwS,hhS,blueR)){
         pickupDagger(i);
       }
+    }
+    // 시각화: 실효 회수 영역 = 시작점 ~ 착지+앞여유, 폭은 기존 그대로 (뒤쪽만 시작점에서 평평하게 컷)
+    if(showWViz){
+      const fX=P.x+dirx*frontMargin, fY=P.y+diry*frontMargin;
+      effects.push({type:'rect',x:(startX+fX)/2,y:(startY+fY)/2,a:wPathA,len:wPathLen+frontMargin,w:wHalfShort*2,col:'#ffaa33',t:0,mt:48});
+    }
+  }
+  if(showWViz){
+    // 비약 데미지 판정 시각화 (경로 캡슐: 폭 wWidth)
+    effects.push({type:'wdmgzone',x1:startX,y1:startY,x2:P.x,y2:P.y,t:0,mt:48});
+    // 단검 대상이면 직접 회수 반경도 표시
+    if(P.dashType!=='enemy'){
+      effects.push({type:'wrange',x:tgt.x,y:tgt.y,r:CONF.daggerPickupR,col2:1,t:0,mt:48});
     }
   }
 
@@ -1121,6 +1154,21 @@ function castR(){
     // 후딜 0.6초 후 시전 종료
     schedule(postDelay,()=>{
       P.rCasting=false;
+      // W가 (발밑 회수와 무관하게) R 종료 시점에 원래 시전 가능했는지 기록.
+      //  쿨초모드: applyCdr=0이라 EW 후에도 W쿨=0 → 준비됨.  비쿨초모드: EW로 쓴 W가 쿨중 → 준비 안 됨.
+      const _wWasReady = (P.wCd<=0) && !(cdResetMode && P.wInternalCd>0);
+      // R 시전 중 캐릭터 발밑에 떨어진 단검(E단검 등) 회수 (R 중엔 막혀 있던 것).
+      //  버퍼된 W가 비약으로 캐릭터를 옮기기 전에 먼저 줍는다. (발밑=파란 원에 닿은 단검만)
+      const _nDagBefore=daggers.length;
+      checkDaggerPickup();
+      const _footPicked = daggers.length<_nDagBefore;
+      if(_wWasReady){
+        // W가 준비돼 있었으면(쿨초모드 등) 선입력 W 발동 → 발밑 회수로 생긴 0.05쿨이 막지 않도록 해제
+        if(_footPicked){ P.wCd=0; P.wInternalCd=0; }
+      } else if(skillBuffer===castW){
+        // W가 원래 쿨 중이었으면 선입력 W는 발동하지 않음 (발밑단검만 회수). "준비 안 됨"도 안 뜨게 버퍼 비움.
+        skillBuffer=null; skillBufferMouse=null;
+      }
       // R 적중 시 자동평타 (W 착지 자동평타와 동일 방식, 평타명령과 별개)
       if(rAnyHit){
         let near=null, bd=Infinity;
@@ -1131,7 +1179,10 @@ function castR(){
         }
         if(near) P.wAutoTarget=near;
       }
-      flushBuffer();
+      flushBuffer(); // 선입력 W 발동
+      // 발밑단검을 회수했다면(쿨초), 이어진 W가 적에게 비약하며 건 풀 쿨(wCd)에 그 쿨초가 덮이지 않도록 보존.
+      //  (내부 쿨 wInternalCd=0.3은 그대로 둔다 — 사용자 요청)
+      if(_footPicked && P.wCd>0.05){ P.wCd=0.05; }
     },'R');
   },'R');
 }
@@ -1892,6 +1943,34 @@ function draw(){
       ctx.beginPath();ctx.arc(e.x,e.y,e.r*(0.6+p*.4),0,Math.PI*2);ctx.stroke();
       ctx.fillStyle=`rgba(162,22,67,${a*.1})`;
       ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+    }else if(e.type==='wrange'){
+      // 단검 직접 회수 반경(주황) 시각화
+      const col = e.col2 ? [255,170,51] : [80,200,140];
+      ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${a*.08})`;
+      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${a*.8})`;ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.stroke();
+    }else if(e.type==='wdmgzone'){
+      // 비약 데미지 판정 캡슐 (경로 ± wWidth/2, 빨강)
+      ctx.lineCap='round';
+      ctx.strokeStyle=`rgba(255,70,70,${a*.13})`;ctx.lineWidth=CONF.wWidth;
+      ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
+      // 테두리(양옆 평행선 + 끝 반원)
+      const dx=e.x2-e.x1, dy=e.y2-e.y1, len=Math.hypot(dx,dy);
+      const hw=CONF.wWidth/2;
+      ctx.strokeStyle=`rgba(255,70,70,${a*.8})`;ctx.lineWidth=2;
+      if(len>0.001){
+        const nx=-dy/len*hw, ny=dx/len*hw;        // 경로 수직 오프셋
+        const a1=Math.atan2(dy,dx);
+        ctx.beginPath();
+        ctx.moveTo(e.x1+nx,e.y1+ny);ctx.lineTo(e.x2+nx,e.y2+ny);
+        ctx.moveTo(e.x1-nx,e.y1-ny);ctx.lineTo(e.x2-nx,e.y2-ny);
+        ctx.stroke();
+        ctx.beginPath();ctx.arc(e.x2,e.y2,hw,a1-Math.PI/2,a1+Math.PI/2);ctx.stroke();        // 착지쪽 캡
+        ctx.beginPath();ctx.arc(e.x1,e.y1,hw,a1+Math.PI/2,a1+Math.PI*1.5);ctx.stroke();       // 시작쪽 캡
+      }else{
+        ctx.beginPath();ctx.arc(e.x1,e.y1,hw,0,Math.PI*2);ctx.stroke();
+      }
     }
   }
 
@@ -1955,9 +2034,16 @@ function loop(now){
 let rightDown=false;
 
 const cursorEl=document.getElementById('custom-cursor');
+let customCursor=true; // 커스텀 커서 사용 여부 (기본 on)
+document.getElementById('cursor-chk').addEventListener('change',e=>{
+  customCursor=e.target.checked;
+  canvas.style.cursor=customCursor?'none':'default'; // off면 기본 시스템 커서 표시
+  if(!customCursor) cursorEl.style.display='none';
+  log(`커스텀 커서 ${customCursor?'ON':'OFF'}`);
+});
 document.addEventListener('mousemove',e=>{
   const onCanvas=e.target===canvas;
-  cursorEl.style.display=onCanvas?'block':'none';
+  cursorEl.style.display=(customCursor&&onCanvas)?'block':'none';
   cursorEl.style.transform=`translate(${e.clientX-CURSOR_W/2}px,${e.clientY-CURSOR_H/2}px)`;
   // 변형 전 레이아웃 중심을 래퍼에서 구함 (transform은 canvas에만 적용)
   const wrap=document.getElementById('canvas-wrap');
@@ -2110,6 +2196,11 @@ document.getElementById('quarter-chk').addEventListener('change',e=>{
   resize();
   log(`쿼터뷰 ${quarterView?'ON':'OFF'}`);
 });
+let showWViz=false;
+document.getElementById('wviz-chk').addEventListener('change',e=>{
+  showWViz=e.target.checked;
+  log(`W 범위 시각화 ${showWViz?'ON':'OFF'}`);
+});
 function bindCam(rangeId, numId, key, fmt){
   const r=document.getElementById(rangeId), n=document.getElementById(numId);
   r.addEventListener('input',e=>{const v=parseFloat(e.target.value);cam[key]=v;n.value=fmt?fmt(v):v;applyCamera();});
@@ -2131,18 +2222,14 @@ const dagVis = { scale:1, squish:1 };
 try{ const s=localStorage.getItem('dagVis'); if(s){ Object.assign(dagVis, JSON.parse(s)); } }catch(e){}
 // ── 단검 W 사거리 원(얇은 파란색 타원) 외형 — R 단검 방향별(좌하/우하/우상/좌상, rIdx 순서) ──
 //  scale  : 가로 반지름 배율 (CONF.wRange 기준)
-//  flatten: 세로/가로 비율 (1=정원, 작을수록 납작) — 카메라 원근 위에 추가로 눌러 원작의 납작함을 맞춤
+//  flatten: 세로/가로 비율 (1=정원, 작을수록 납작)
 //  angle  : 캔버스 공간에서의 기울기(도)
-const WRING_DEFAULT = { scale:1, flatten:1, angle:0 };
-const wRingVis = [0,1,2,3].map(()=>({...WRING_DEFAULT}));
-try{
-  const s=localStorage.getItem('wRingVis');
-  if(s){
-    const data=JSON.parse(s);
-    if(Array.isArray(data)){ data.forEach((o,i)=>{ if(wRingVis[i]) Object.assign(wRingVis[i],o); }); }
-    else { wRingVis.forEach(o=>Object.assign(o,data)); } // 구버전(단일 객체) 호환
-  }
-}catch(e){}
+const wRingVis = [
+  { scale:0.83, flatten:0.92, angle:-56 },  // 좌하
+  { scale:0.80, flatten:1.00, angle:180 },  // 우하
+  { scale:0.79, flatten:0.91, angle:-36 },  // 우상
+  { scale:0.82, flatten:0.89, angle:133 },  // 좌상
+];
 function bindDag(rangeId, numId, key){
   const r=document.getElementById(rangeId), n=document.getElementById(numId);
   r.value=dagVis[key]; n.value=dagVis[key].toFixed(2);
@@ -2163,45 +2250,6 @@ const RDAG_DEFAULT = [
 ];
 const rDagVis = RDAG_DEFAULT.map(o=>({...o}));
 try{ const s=localStorage.getItem('rDagVis'); if(s){ const arr=JSON.parse(s); arr.forEach((o,i)=>{ if(rDagVis[i]) Object.assign(rDagVis[i], o); }); } }catch(e){}
-
-// ── W 사거리 원(얇은 파란색 타원) 외형 조정 UI — R 단검 방향별 (좌측 패널) ──
-(function(){
-  const dirs=['좌하','우하','우상','좌상'];
-  const body=document.getElementById('rdag-body');
-  const fields=[
-    {key:'scale',   label:'가로', min:0.3,  max:3,  step:0.01},
-    {key:'flatten', label:'납작', min:0.15, max:1,  step:0.01},
-    {key:'angle',   label:'각도', min:-180, max:180, step:0.5 },
-  ];
-  const save=()=>{ try{ localStorage.setItem('wRingVis', JSON.stringify(wRingVis)); }catch(e){} };
-  const refreshers=[];
-  dirs.forEach((name,i)=>{
-    const grp=document.createElement('div'); grp.className='rd-grp';
-    const t=document.createElement('div'); t.className='rd-dir'; t.textContent=name; grp.appendChild(t);
-    fields.forEach(f=>{
-      const lab=document.createElement('label');
-      const sp=document.createElement('span'); sp.textContent=f.label; sp.style.width='32px'; lab.appendChild(sp);
-      const r=document.createElement('input'); r.type='range'; r.min=f.min; r.max=f.max; r.step=f.step;
-      const n=document.createElement('input'); n.type='number'; n.step=f.step;
-      const setDisp=v=>{ r.value=v; n.value=(f.step<1?v.toFixed(2):v); };
-      setDisp(wRingVis[i][f.key]);
-      const upd=v=>{ wRingVis[i][f.key]=v; setDisp(v); save(); };
-      r.addEventListener('input',e=>upd(parseFloat(e.target.value)));
-      n.addEventListener('input',e=>{const x=parseFloat(e.target.value); if(!isNaN(x))upd(x);});
-      lab.appendChild(r); lab.appendChild(n); grp.appendChild(lab);
-      refreshers.push(()=>setDisp(wRingVis[i][f.key]));
-    });
-    body.appendChild(grp);
-  });
-  document.getElementById('rdag-reset').addEventListener('click',()=>{
-    wRingVis.forEach(o=>Object.assign(o, WRING_DEFAULT)); save(); refreshers.forEach(fn=>fn());
-  });
-  const panel=document.getElementById('rdag-ui'), title=document.getElementById('rdag-title');
-  title.addEventListener('click',()=>{
-    panel.classList.toggle('collapsed');
-    title.textContent='W 사거리 원 외형 '+(panel.classList.contains('collapsed')?'▸':'▾');
-  });
-})();
 
 (()=>{const m=document.getElementById('credit-modal');
 document.getElementById('credit').addEventListener('click',()=>m.classList.add('show'));
