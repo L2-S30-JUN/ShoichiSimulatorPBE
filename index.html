@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="color-scheme" content="dark">
-<title>Shoichi Simulator Prototype</title>
-<link rel="icon" type="image/png" href="favicon.png">
+<title>Shoichi Simulator</title>
+<link rel="icon" type="image/png" href="sprite/fav.png">
 <style>
 :root{color-scheme:dark;forced-color-adjust:none}
 img{forced-color-adjust:none}
@@ -27,8 +27,6 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
 .sk .cd{position:absolute;inset:0;background:rgba(0,0,0,.7);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#ff0;display:none}
 .sk.ready{border-color:#5af;box-shadow:0 0 6px rgba(80,160,255,.3)}
 .sk.enhanced{border-color:#f80;box-shadow:0 0 10px rgba(255,140,0,.5)}
-#info{position:fixed;top:8px;left:8px;font-size:12px;line-height:1.7;color:#999;background:rgba(0,0,0,.6);padding:8px 12px;border-radius:6px}
-#info b{color:#5af}
 #passive-ui{position:fixed;top:8px;right:8px;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:6px;font-size:14px;z-index:20}
 #passive-ui .dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #666;margin:0 2px;vertical-align:middle}
 #passive-ui .dot.on{background:#f80;border-color:#fa0;box-shadow:0 0 4px #f80}
@@ -64,16 +62,45 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
 #rdag-ui button{margin-top:4px;width:100%;padding:3px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:11px;cursor:pointer}
 #rdag-ui button:hover{background:#333;border-color:#5af}
 #rdag-ui.collapsed .rd-grp,#rdag-ui.collapsed button{display:none}
+#notice-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:300}
+#notice-modal.show{display:flex}
+#notice-modal .box{background:#1a1a2a;border:1px solid #444;border-radius:8px;padding:24px 28px;max-width:480px;color:#ddd;font-size:13px;line-height:1.7;text-align:center}
+#notice-modal .ttl{font-size:16px;font-weight:bold;color:#fc5;margin-bottom:14px}
+#notice-modal .line{margin-bottom:14px;color:#ccc}
+#notice-modal .line b{color:#5af}
+#notice-modal .sub{font-size:11px;color:#888}
+#notice-modal .hide-chk{display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;color:#999;margin-top:4px;cursor:pointer}
+#notice-modal .close{margin-top:14px;padding:6px 28px;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;cursor:pointer;font-size:13px}
+#notice-modal .close:hover{background:#333}
+#settings-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:300}
+#settings-modal.show{display:flex}
+#settings-modal .box{background:#1a1a2a;border:1px solid #444;border-radius:8px;padding:22px 26px;width:300px;color:#ddd;font-size:13px;line-height:1.6}
+#settings-modal .ttl{font-size:15px;font-weight:bold;color:#5af;margin-bottom:12px;text-align:center}
+#settings-modal .row{display:flex;align-items:center;justify-content:space-between;margin:10px 0 2px}
+#settings-modal .row label{display:flex;align-items:center;gap:6px;cursor:pointer}
+#settings-modal .sub{font-size:10px;color:#888}
+#combo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:300}
+#combo-modal.show{display:flex}
+#combo-modal .box{background:#1a1a2a;border:1px solid #444;border-radius:8px;padding:22px 26px;width:320px;color:#ddd;font-size:13px;line-height:1.5}
+#combo-modal .ttl{font-size:15px;font-weight:bold;color:#5af;margin-bottom:12px;text-align:center}
+#combo-modal .sub{font-size:10px;color:#888}
+#combo-modal .reset-btn{padding:5px 10px;border:1px solid #555;border-radius:4px;background:#222;color:#cde;cursor:pointer;font-size:12px}
+#combo-modal .reset-btn:hover{background:#333}
+#combo-modal .close{margin-top:16px;width:100%;padding:6px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;cursor:pointer;font-size:13px}
+#combo-modal .close:hover{background:#333}
+#settings-modal .keys{display:flex;gap:8px;justify-content:center;margin-top:4px}
+#settings-modal .kcol{text-align:center}
+#settings-modal .klabel{font-size:10px;color:#888;margin-bottom:2px}
+#settings-modal .kcol button{width:42px;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;cursor:pointer;font-size:12px}
+#settings-modal .kcol button.capturing{border-color:#fc5;color:#fc5}
+#settings-modal .reset-btn{padding:3px 10px;border:1px solid #555;border-radius:4px;background:#222;color:#999;cursor:pointer;font-size:11px}
+#settings-modal .close{margin-top:16px;width:100%;padding:6px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;cursor:pointer;font-size:13px}
+#settings-modal .close:hover{background:#333}
 #cd-warning{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 0 4px #000,0 0 2px #000,1px 1px 0 #000;padding:4px 12px;pointer-events:none;opacity:0;transition:opacity .25s;z-index:100;white-space:nowrap}
 #cd-warning.show{opacity:1}
 </style>
 </head>
 <body>
-<div id="info">
-  <b>우클릭</b> 이동 / 더미 우클릭 → 평타 &nbsp;<b>좌클릭</b> 평타<br>
-  <b>Q</b> 표리 &nbsp;<b>W</b> 비약(적/단검 대상) &nbsp;<b>E</b> 협상 &nbsp;<b>R</b> 무자비 &nbsp;<b>D</b> 은신 &nbsp;<b>F</b> 블링크<br>
-  <b>`</b> 쿨초기화 &nbsp;<b>1</b> 쿨감- &nbsp;<b>2</b> 쿨감+ &nbsp;<b>3</b> 더미 생성 &nbsp;<b>4</b> 더미 삭제
-</div>
 <div id="passive-ui">
   부당거래
   <span class="dot" id="s0"></span><span class="dot" id="s1"></span><span class="dot" id="s2"></span><span class="dot" id="s3"></span><span class="dot" id="s4"></span>
@@ -95,29 +122,39 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
     <button id="as-up">+</button>
   </div>
   <div style="margin-top:6px;font-size:12px"><label><input type="checkbox" id="bisaek-chk"> 비색단검 (공속 +0.21)</label></div>
-  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="shake-chk" checked> 화면 흔들림</label></div>
-  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="quarter-chk" checked> 쿼터뷰</label></div>
-  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="wviz-chk"> W 범위 시각화 (비약/회수)</label></div>
+  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="shake-chk"> 화면 흔들림</label></div>
   <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="cursor-chk" checked> 커스텀 커서</label></div>
-  <div style="margin-top:6px;border-top:1px solid #333;padding-top:6px;font-size:11px;color:#aaa">카메라 조정</div>
-  <div style="font-size:11px"><label>Roll(Z): <input type="range" id="cam-roll" min="-180" max="180" step="0.5" value="-8" style="width:90px"><input type="number" id="cam-roll-num" step="0.5" value="-8" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>PitchY: <input type="range" id="cam-sy" min="0.05" max="2" step="0.01" value="1.01" style="width:90px"><input type="number" id="cam-sy-num" step="0.01" value="1.01" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>YawX: <input type="range" id="cam-sx" min="0.05" max="2" step="0.01" value="0.92" style="width:90px"><input type="number" id="cam-sx-num" step="0.01" value="0.92" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>TiltX(눕힘): <input type="range" id="cam-tx" min="-85" max="85" step="0.5" value="44.5" style="width:90px"><input type="number" id="cam-tx-num" step="0.5" value="44.5" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>TiltY: <input type="range" id="cam-ty" min="-85" max="85" step="0.5" value="0.5" style="width:90px"><input type="number" id="cam-ty-num" step="0.5" value="0.5" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>원근거리: <input type="range" id="cam-persp" min="100" max="8000" step="50" value="1600" style="width:90px"><input type="number" id="cam-persp-num" step="50" value="1600" style="width:60px"></label></div>
-  <div style="font-size:11px"><label>줌: <input type="range" id="cam-zoom" min="0.3" max="3" step="0.01" value="1.57" style="width:90px"><input type="number" id="cam-zoom-num" step="0.01" value="1.57" style="width:55px"></label></div>
-  <div style="margin-top:4px;font-size:12px"><label><input type="checkbox" id="overlay-chk"> 원작 오버레이</label> <input type="range" id="overlay-a" min="0" max="1" step="0.05" value="0.4" style="width:60px;vertical-align:middle"></div>
-  <div style="margin-top:6px;border-top:1px solid #333;padding-top:6px;font-size:11px;color:#aaa">단검 외형 (공통)</div>
-  <div style="font-size:11px"><label>크기: <input type="range" id="dag-scale" min="0.5" max="2" step="0.01" value="1" style="width:90px"><input type="number" id="dag-scale-num" step="0.01" value="1" style="width:55px"></label></div>
-  <div style="font-size:11px"><label>Y찌부: <input type="range" id="dag-squish" min="0.3" max="1.5" step="0.01" value="1" style="width:90px"><input type="number" id="dag-squish-num" step="0.01" value="1" style="width:55px"></label></div>
+  <div style="margin-top:2px;font-size:10px;color:#888">마우스가 흐물거리면 체크 해제해주세요</div>
+  <div style="margin-top:10px" class="label">사운드 볼륨</div>
+  <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+    <input type="range" id="vol-slider" min="0" max="100" value="100" style="flex:1;accent-color:#5af;cursor:pointer">
+    <span id="vol-val" style="font-size:11px;color:#ddd;width:34px;text-align:right">100%</span>
+  </div>
+  <div style="margin-top:10px;display:flex;gap:4px">
+    <button id="dummy-spawn-btn" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">더미 생성</button>
+    <button id="dummy-del-btn" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">더미 삭제</button>
+  </div>
+  <div style="font-size:10px;color:#888;text-align:center;margin-top:2px" id="dummy-mode-hint">버튼 클릭 후 좌클릭한 위치에 적용</div>
+  <div style="margin-top:10px"><button id="settings-btn" style="width:100%;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">⚙ 설정</button></div>
+  <div style="margin-top:10px" class="label">콤보 가이드</div>
+  <div style="margin-top:2px;display:flex;gap:4px">
+    <button id="rec-btn" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">● 녹화</button>
+    <button id="play-btn" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">▶ 재생</button>
+  </div>
+  <div style="margin-top:4px"><button id="combo-code-btn" style="width:100%;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:12px;cursor:pointer">📋 공유 코드</button></div>
+  <div style="font-size:10px;color:#888;text-align:center;margin-top:2px" id="combo-hint">녹화 후 코드로 공유 · 고스트로 재생</div>
+  <div style="margin-top:6px;display:flex;gap:4px">
+    <button id="preset-7" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:11px;cursor:pointer">7단비약</button>
+    <button id="preset-9" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:11px;cursor:pointer">9단비약</button>
+    <button id="preset-12" style="flex:1;padding:4px 0;border:1px solid #555;border-radius:4px;background:#222;color:#ddd;font-size:11px;cursor:pointer">12단비약</button>
+  </div>
+  <div style="font-size:10px;color:#888;text-align:center;margin-top:2px">버튼을 누르면 예시 콤보 쉐도우 재생</div>
   <div style="display:none" class="row">
     <button id="fps-down">-</button><span id="fps-val"></span><button id="fps-up">+</button>
   </div>
 </div>
 <div id="log"></div>
 <div id="canvas-wrap" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;z-index:1;"><canvas id="c"></canvas></div>
-<img id="ref-overlay" src="sprite/screenshot1.jpg" style="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;pointer-events:none;opacity:.4;display:none;z-index:30">
 <div id="stack-indicator"><span class="icon"></span><span class="num" id="stack-num">0</span></div>
 <div id="hud">
   <div class="sk ready" id="bQ"><span class="key">Q</span><img class="icon-img" id="qIcon" src="icon/shoqfix.png"><div class="cd" id="cQ"></div></div>
@@ -134,8 +171,52 @@ canvas{cursor:none;display:block;transform-origin:center center;will-change:tran
     <img src="sprite/screenshot.png" alt="screenshot">
     <div class="msg">본 사이트는 님블뉴런 IP에 위배되지 않는 선에서 제작되는 2차 창작 사이트입니다.<br>원작과 다른 점이 있다면 피드백해주세요!</div>
     <div class="thanks-title">Thanks to.. <span style="color:#999;font-weight:normal;font-size:12px">(테스트 해주신 분들)</span></div>
-    <div class="thanks-list">카미생, 정선우123, 지존똥, 칼챔충</div>
+    <div class="thanks-list">쿠온우횬, 정선우123, 지존똥, 칼챔충, 루미널</div>
     <button class="close" id="credit-close">닫기</button>
+  </div>
+</div>
+<div id="settings-modal">
+  <div class="box">
+    <div class="ttl">⚙ 설정</div>
+    <div class="row"><label><input type="checkbox" id="set-autoatk" checked> 스킬 이후 자동평타</label></div>
+    <div class="sub">끄면 W 착지 · R 적중 · 은신 공격 후 자동평타가 나가지 않습니다</div>
+    <div class="row"><label><input type="checkbox" id="set-invert"> 마우스 반전</label></div>
+    <div class="sub">좌클릭 이동·공격 명령 / 우클릭 평타</div>
+    <div class="row"><label><input type="checkbox" id="set-dfswap"> D/F 위치 변경</label></div>
+    <div class="sub">은신과 블링크의 키가 바뀌고 하단 아이콘 순서도 바뀝니다</div>
+    <div class="row"><label><input type="checkbox" id="set-moveatk" checked> 플레이어 이동 공격 클릭</label></div>
+    <div class="sub">비활성화 시 a키를 누르면 바로 평타가 나갑니다</div>
+    <div class="row"><span>스킬 키 변경</span><button class="reset-btn" id="key-reset">초기화</button></div>
+    <div class="keys">
+      <div class="kcol"><div class="klabel">표리</div><button id="key-q">Q</button></div>
+      <div class="kcol"><div class="klabel">비약</div><button id="key-w">W</button></div>
+      <div class="kcol"><div class="klabel">협상</div><button id="key-e">E</button></div>
+      <div class="kcol"><div class="klabel">무자비</div><button id="key-r">R</button></div>
+    </div>
+    <div class="sub" style="text-align:center;margin-top:4px">버튼 클릭 후 원하는 키 입력 (ESC 취소)</div>
+    <button class="close" id="settings-close">닫기</button>
+  </div>
+</div>
+<div id="combo-modal">
+  <div class="box">
+    <div class="ttl">📋 콤보 공유 코드</div>
+    <div class="sub">내 녹화 코드 (복사해서 공유)</div>
+    <textarea id="combo-export" readonly placeholder="먼저 녹화를 한 뒤 정지하면 코드가 생성됩니다" style="width:100%;height:70px;margin-top:4px;background:#111;color:#9cf;border:1px solid #444;border-radius:4px;font-size:11px;resize:none;box-sizing:border-box"></textarea>
+    <button class="reset-btn" id="combo-copy" style="width:100%;margin-top:4px">코드 복사</button>
+    <div class="sub" style="margin-top:14px">받은 코드 불러오기 (붙여넣고 불러오기)</div>
+    <textarea id="combo-import" placeholder="공유받은 코드를 여기에 붙여넣으세요" style="width:100%;height:70px;margin-top:4px;background:#111;color:#ddd;border:1px solid #444;border-radius:4px;font-size:11px;resize:none;box-sizing:border-box"></textarea>
+    <button class="reset-btn" id="combo-load" style="width:100%;margin-top:4px">불러오기</button>
+    <div class="sub" id="combo-msg" style="text-align:center;margin-top:6px;min-height:12px"></div>
+    <button class="close" id="combo-close">닫기</button>
+  </div>
+</div>
+<div id="notice-modal">
+  <div class="box">
+    <div class="ttl">⚠ 안내</div>
+    <div class="line">더 정확한 단검 간 거리를 설정하기 위해<br><b>F11키</b>를 눌러 전체화면으로 이용해주세요!</div>
+    <div class="line">Microsoft Edge 브라우저를 사용하신다면<br><b>'마우스 제스처'</b> 기능을 비활성화해주세요.<br><span class="sub">(우클릭 드래그가 제스처로 인식되어 탭이 닫힐 수 있습니다)</span></div>
+    <label class="hide-chk"><input type="checkbox" id="notice-hide-chk"> 오늘 다시 보지 않기</label>
+    <button class="close" id="notice-close">확인</button>
   </div>
 </div>
 <img id="custom-cursor" src="icon/cursor.png" width="74" height="41" alt="">
@@ -238,6 +319,7 @@ const CONF = {
   wDmg: 100,
   wWidth: 2.5 * PX,
   wCd: 12,
+  wPostDelay: 0.15,             // W 시전 후딜(초). 이 동안 다른 스킬·자동평타는 즉시 사용 가능(W만 버퍼→후딜 후 선입력), 이동/좌클릭 평타는 잠금 + 비약 궤적이 그려지며 데미지가 시작→착지 순으로 시간차 적중
   wSpeed: 18 * PX * dt,
 
   // E
@@ -346,9 +428,10 @@ const CURSOR_H=Math.round(74*347/619);
 // AUDIO
 // ============================================================
 const AC = new (window.AudioContext || window.webkitAudioContext)();
-function beep(f,d,t='square',v=.1){const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+const masterGain=AC.createGain();masterGain.connect(AC.destination); // 전체 볼륨 (우측 패널 슬라이더로 제어)
+function beep(f,d,t='square',v=.1){const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(masterGain);o.start();o.stop(AC.currentTime+d)}
 // WAV 효과음 (WebAudio AudioBuffer로 디코드 — 지연 없음)
-const sfxNames=['attack','attackhit','Q_missed','Qdamage','Q2_missed','Q2damage','W_daggerhit','Wdamage','E_missed','Edagger_hit','R_missed','R_hit','daggerdrop','daggerhit','blink','nodagger','daggerskill','daggerskill2','cloakend','cooldown'];
+const sfxNames=['attack','attackhit','Q_missed','Qdamage','Q2_missed','Q2damage','W_daggerhit','Wdamage','E_missed','Edagger_hit','R_missed','R_hit','daggerdrop','daggerhit','daggerpick','blink','nodagger','daggerskill','daggerskill2','cloakend','cooldown'];
 const sfxBuf={};
 sfxNames.forEach(name=>{
   fetch(`sfx/${name}.wav`).then(r=>r.arrayBuffer()).then(b=>AC.decodeAudioData(b)).then(buf=>{sfxBuf[name]=buf;}).catch(()=>{});
@@ -361,7 +444,7 @@ function playSfx(name,vol=0.5){
   const buf=sfxBuf[name];if(!buf)return;
   const src=AC.createBufferSource();src.buffer=buf;
   const g=AC.createGain();g.gain.value=vol;
-  src.connect(g);g.connect(AC.destination);
+  src.connect(g);g.connect(masterGain);
   src.start(0);
 }
 function sfxAtk(){playSfx('attack')}
@@ -483,6 +566,8 @@ const P = {
   locked: false, lockTimer: 0,
   // dash (W)
   dashing: false, dashTarget: null, dashType: null, dashStart: null,
+  // W 후딜(0.15초): 이 동안 다른 스킬·자동평타는 즉시 사용 가능(W만 선입력 버퍼), 이동/좌클릭 평타는 잠금. 착지 자동평타는 순간이동 직후 즉시 시작, 종료 시 버퍼된 W(2번째 포함) 발동
+  wPostDelay: 0,
   // E hop
   hopping: false, hopVx: 0, hopVy: 0, hopTimer: 0,
   // Q casting (시전 중 이동 불가)
@@ -507,14 +592,35 @@ const effects = [];
 const walls = [];
 let skillBuffer = null;  // 선입력 버퍼 (시전시간 중 마지막 입력 1개 저장)
 let skillBufferMouse = null; // 선입력 시점의 마우스 좌표
+// ── W 전용 2번째 선입력 슬롯 (독립) ──
+//  W는 다른 스킬과 달리 2회까지 선입력 가능. 1번째 입력은 skillBuffer를 그대로 쓰고,
+//  skillBuffer가 이미 차 있을 때 들어온 W만 이 wBuffer2에 저장한다.
+//  → 2개가 차는 경우는 [아무 스킬, W] 또는 [W, W] 뿐. 비-W 스킬 입력 시 wBuffer2는 취소(null).
+let wBuffer2 = null;
+let wBuffer2Mouse = null;
 const CD_BUFFER_THRESHOLD = 0.1; // 쿨다운 ≤ 이 값일 때 선입력 허용
+// 주의: W 후딜(wPostDelay)은 더 이상 isCasting에 포함하지 않는다 → 후딜 중 다른 스킬은 즉시 시전 가능.
+// (W만 후딜 중 입력 시 버퍼에 쌓아 후딜 종료 후 선입력으로 발동 — keydown W 분기에서 별도 처리)
 function isCasting(){return P.dashing||P.rCasting||P.qCasting||(P.eCasting&&!P.eCanCancel);}
 function tryOrBuffer(fn){if(isCasting()){skillBuffer=fn;skillBufferMouse={x:mouse.x,y:mouse.y};}else{fn();}}
-function flushBuffer(){if(skillBuffer){const fn=skillBuffer;const sm=skillBufferMouse;skillBuffer=null;skillBufferMouse=null;const ox=mouse.x,oy=mouse.y;mouse.x=sm.x;mouse.y=sm.y;fn();mouse.x=ox;mouse.y=oy;}}
+// W 선입력(독립 2칸): skillBuffer가 비었으면 1칸째, 차 있으면 2칸째(wBuffer2). 둘 다 차면 무시(3번째 불가).
+function bufferW(){
+  const m={x:mouse.x,y:mouse.y};
+  if(!skillBuffer){ skillBuffer=castW; skillBufferMouse=m; }
+  else if(!wBuffer2){ wBuffer2=castW; wBuffer2Mouse=m; }
+}
+// flush: 한 번에 1개만 발동. skillBuffer(먼저 입력) 우선, 없으면 wBuffer2(2번째 W).
+let bufferFlushing=false; // 선입력 플러시로 발동 중인지 (대상 없는 선입력 W의 "비약 대상 없음" 메시지 억제용)
+function flushBuffer(){
+  let fn=null, sm=null;
+  if(skillBuffer){ fn=skillBuffer; sm=skillBufferMouse; skillBuffer=null; skillBufferMouse=null; }
+  else if(wBuffer2){ fn=wBuffer2; sm=wBuffer2Mouse; wBuffer2=null; wBuffer2Mouse=null; }
+  if(fn){ const ox=mouse.x,oy=mouse.y; mouse.x=sm.x;mouse.y=sm.y; bufferFlushing=true; fn(); bufferFlushing=false; mouse.x=ox;mouse.y=oy; }
+}
 function bufferShortCd(fn, cd){ if(cd>0 && cd<=CD_BUFFER_THRESHOLD){ skillBuffer=fn; skillBufferMouse={x:mouse.x,y:mouse.y}; } }
 let aMode = false;       // A키 공격 모드 (사거리 표시 + 좌클릭 타겟팅)
 let shake = {x:0,y:0,t:0,m:0};
-let shakeEnabled = true;
+let shakeEnabled = false;
 
 // ============================================================
 // DUMMY
@@ -538,12 +644,13 @@ function spawnDagger(x,y){
   sfxDaggerDrop();
 }
 
-function pickupDagger(idx){
+function pickupDagger(idx, viaW){
   daggers.splice(idx,1);
   sfxPickup();
-  // 단검 회수 → W 쿨다운 0.05초로 설정 (쿨초기화 모드에서도 동일 적용)
+  // 단검 회수 → W로 회수(viaW)하면 W 쿨다운 0.05초, 걸어가서 회수하면 0초(쿨 완전 초기화).
+  //   → W 쿨다운 중 걸어가서 주우면 쿨이 0이 되어 즉시 다시 W 가능.
   // 내부쿨다운도 함께 클리어 (W로 적을 친 뒤 경로 단검 회수 시 0.3초 내부쿨이 남아있던 버그 수정)
-  P.wCd=0.05;
+  P.wCd = viaW ? 0.05 : 0;
   P.wInternalCd=0;
   // auto-throw at nearest enemy within 5m
   let best=null, bestD=Infinity;
@@ -555,6 +662,8 @@ function pickupDagger(idx){
   if(!best){
     playSfx('nodagger');
   } else {
+    // 걸어가서 회수: 주위에 적이 있으면 daggerpick 재생 (적이 없으면 위의 nodagger)
+    if(!viaW) playSfx('daggerpick');
     const a=ang(P,best);
     const bonus = best.eMark ? 1+CONF.eMarkDmgBonus : 1;
     projectiles.push({
@@ -656,7 +765,7 @@ function resolveAttack(){
     sfxAtkHit();
     const behind=atkAngle;
     const dgX=tgt.x+Math.cos(behind)*1.2*PX, dgY=tgt.y+Math.sin(behind)*1.2*PX;
-    effects.push({type:'dagdrop',x:dgX,y:dgY,sx:tgt.x,sy:tgt.y,t:0,mt:9999,spawnTime:performance.now()+667}); // 단검 생성 시 제거
+    recordEffect({type:'dagdrop',x:dgX,y:dgY,sx:tgt.x,sy:tgt.y,t:0,mt:9999,spawnTime:performance.now()+667}); // 단검 생성 시 제거
     schedule(0.667,()=>{
       spawnDagger(dgX,dgY);
     });
@@ -674,6 +783,7 @@ function cancelAttack(){
 function processAutoAttack(){
   // 평타명령(atkTarget) 우선, 없으면 W 착지 자동평타 타겟(wAutoTarget) 사용
   const tgt=(P.atkTarget&&P.atkTarget.alive)?P.atkTarget:((P.wAutoTarget&&P.wAutoTarget.alive)?P.wAutoTarget:null);
+  // 자동평타는 W 후딜의 영향을 받지 않는다 (P.wPostDelay 제외).
   if(!tgt||P.dashing||P.rCasting||P.hopping||P.qCasting||P.eCasting)return;
   // W후 자동평타 윈드업 중이면 processAutoAttack 무시 (윈드업 타이머가 처리)
   if(P.atkWindup)return;
@@ -693,7 +803,7 @@ function processAutoAttack(){
 
 // 좌클릭 평타 (마우스 위치 기준)
 function doBasicAttack(){
-  if(P.atkCd>0||P.locked||P.dashing||P.rCasting||P.hopping)return;
+  if(P.atkCd>0||P.locked||P.dashing||P.rCasting||P.hopping||P.wPostDelay>0)return;
   let tgt=null,bd=Infinity;
   for(const d of dummies){
     if(!d.alive)continue;
@@ -824,7 +934,8 @@ function castW(){
       if(!P.eCasting) moveTarget={x:wPending.target.x,y:wPending.target.y};
       return;
     }
-    log('비약 대상 없음');
+    // 선입력(버퍼 플러시)으로 발동된 W가 대상을 못 찾으면 조용히 무시 (후딜 중 선입력 W 매싱 시 메시지 도배 방지)
+    if(!bufferFlushing) log('비약 대상 없음');
     return;
   }
 
@@ -866,7 +977,7 @@ function executeW(target,type){
 
 // update에서 호출: W 대기 중 범위 진입 체크
 function checkWPending(){
-  if(!wPending||P.wCd>0||P.dashing||P.rCasting)return;
+  if(!wPending||P.wCd>0||P.dashing||P.rCasting||P.wPostDelay>0)return;
   // E 시전 중엔 대기 (W 범위 밖에서 E를 누른 경우 E 후딜 끝난 뒤 접근/시전)
   if(P.eCasting)return;
   const t=wPending.target;
@@ -895,29 +1006,17 @@ function executeWTeleport(){
     const behind=ang({x:startX,y:startY},tgt);
     P.x=tgt.x+Math.cos(behind)*50;
     P.y=tgt.y+Math.sin(behind)*50;
-    // 경로상 피해
-    for(const dm of dummies){
-      if(!dm.alive)continue;
-      if(lineHitsCircle(startX,startY,P.x,P.y,dm.x,dm.y,dm.r+CONF.wWidth/2)){
-        hitDummy(dm,CONF.wDmg,behind,true);
-        wHitAny=true;
-      }
-    }
+    // 경로상 피해 (시작→착지 순으로 시간차 적중)
+    wHitAny=applyWPathDamage(startX,startY,P.x,P.y,behind);
   } else {
     // 단검 위치로 순간이동
     P.x=tgt.x;P.y=tgt.y;
-    // 경로상 피해
+    // 경로상 피해 (시작→착지 순으로 시간차 적중)
     const ba=ang({x:startX,y:startY},{x:tgt.x,y:tgt.y});
-    for(const dm of dummies){
-      if(!dm.alive)continue;
-      if(lineHitsCircle(startX,startY,P.x,P.y,dm.x,dm.y,dm.r+CONF.wWidth/2)){
-        hitDummy(dm,CONF.wDmg,ba,true);
-        wHitAny=true;
-      }
-    }
+    wHitAny=applyWPathDamage(startX,startY,P.x,P.y,ba);
     // 대상 단검 줍기
     const idx=daggers.findIndex(dg=>Math.hypot(dg.x-tgt.x,dg.y-tgt.y)<CONF.daggerPickupR);
-    if(idx>=0) pickupDagger(idx);
+    if(idx>=0) pickupDagger(idx, true);
   }
 
   // 경로 상 다른 단검도 줍기 (W 쿨 초기화) - 가로 넓게, 세로 정직하게
@@ -939,49 +1038,86 @@ function executeWTeleport(){
       // 시작점(캐릭터)보다 도약 방향 뒤쪽에 중심이 있는 단검만 제외 (시작점에서 평평하게 컷, 옆쪽은 그대로)
       if((daggers[i].x-startX)*dirx+(daggers[i].y-startY)*diry < 0) continue;
       if(circleHitsRect(daggers[i].x,daggers[i].y,wPathCx,wPathCy,wPathA,hwS,hhS,blueR)){
-        pickupDagger(i);
+        pickupDagger(i, true);
       }
     }
     // 시각화: 실효 회수 영역 = 시작점 ~ 착지+앞여유, 폭은 기존 그대로 (뒤쪽만 시작점에서 평평하게 컷)
     if(showWViz){
       const fX=P.x+dirx*frontMargin, fY=P.y+diry*frontMargin;
-      effects.push({type:'rect',x:(startX+fX)/2,y:(startY+fY)/2,a:wPathA,len:wPathLen+frontMargin,w:wHalfShort*2,col:'#ffaa33',t:0,mt:48});
+      recordEffect({type:'rect',x:(startX+fX)/2,y:(startY+fY)/2,a:wPathA,len:wPathLen+frontMargin,w:wHalfShort*2,col:'#ffaa33',t:0,mt:48});
     }
   }
   if(showWViz){
     // 비약 데미지 판정 시각화 (경로 캡슐: 폭 wWidth)
-    effects.push({type:'wdmgzone',x1:startX,y1:startY,x2:P.x,y2:P.y,t:0,mt:48});
+    recordEffect({type:'wdmgzone',x1:startX,y1:startY,x2:P.x,y2:P.y,t:0,mt:48});
     // 단검 대상이면 직접 회수 반경도 표시
     if(P.dashType!=='enemy'){
-      effects.push({type:'wrange',x:tgt.x,y:tgt.y,r:CONF.daggerPickupR,col2:1,t:0,mt:48});
+      recordEffect({type:'wrange',x:tgt.x,y:tgt.y,r:CONF.daggerPickupR,col2:1,t:0,mt:48});
     }
   }
 
   if(wHitAny) sfxWdmg();
   // Trail effect
-  effects.push({type:'wtrail',x1:startX,y1:startY,x2:P.x,y2:P.y,t:0,mt:15});
+  recordEffect({type:'wtrail',x1:startX,y1:startY,x2:P.x,y2:P.y,t:0,mt:15});
   P.dashing=false;
-  // 버퍼된 스킬 실행
-  if(skillBuffer){flushBuffer();}
-  // 자동평타 처리:
-  // - 착지 지점이 평타 사거리 안에 적이 있으면 자동평타 (이전 명령 무관)
-  // - 범위 밖이면 평타 명령(atkTarget)이 유지된 경우만 추격, E/Q/S로 끊기면 아무 것도 안 함
-  if(!P.eCasting&&!P.qCasting&&!P.rCasting&&!P.dashing&&!P.hopping&&!P.atkWindup){
-    let inRange=null, bd=Infinity;
-    for(const d of dummies){
-      if(!d.alive)continue;
-      const dd=dist(P,d);
-      if(dd<=CONF.atkRange+d.r&&dd<bd){bd=dd;inRange=d;}
+  // 0.15초 후딜 시작 — 이동/평타(좌클릭)는 잠기지만 다른 스킬은 즉시 사용 가능, W만 후딜 후 선입력 발동.
+  P.wPostDelay=CONF.wPostDelay;
+  // 착지 자동평타는 후딜의 영향을 받지 않고 즉시 시작한다. (선입력된 다음 스킬이 없을 때만)
+  //  후딜 중 W를 선입력하면 keydown에서 이 자동평타를 취소하고 W를 큐에 쌓는다.
+  if(!skillBuffer && !wBuffer2) setupWLandingAutoAttack();
+}
+
+// W 경로 데미지: 경로(시작→착지)에 걸친 모든 적을 적중하되,
+//  시작점에 가까운 적이 먼저, 착지점에 가까운 적이 나중에 맞도록 0.15초 안에서 시간차로 적용.
+function applyWPathDamage(startX,startY,endX,endY,knockA){
+  const dx=endX-startX, dy=endY-startY;
+  const len2=dx*dx+dy*dy;
+  let any=false;
+  for(const dm of dummies){
+    if(!dm.alive)continue;
+    if(!lineHitsCircle(startX,startY,endX,endY,dm.x,dm.y,dm.r+CONF.wWidth/2))continue;
+    any=true;
+    // 경로 진행도 t(0=시작, 1=착지)에 비례한 미세 지연
+    let t=0;
+    if(len2>0.0001){ t=((dm.x-startX)*dx+(dm.y-startY)*dy)/len2; t=Math.max(0,Math.min(1,t)); }
+    const delay=t*CONF.wPostDelay;
+    // 패시브 스택은 적중 인원수와 무관하게 W 1회당 1개만 부여 → 여기선 grantStack=false, 아래에서 한 번만 addStack.
+    if(delay<=0.0001){
+      hitDummy(dm,CONF.wDmg,knockA,false);
+    } else {
+      const target=dm;
+      schedule(delay,()=>{ if(target.alive) hitDummy(target,CONF.wDmg,knockA,false); });
     }
-    if(inRange && !skillBuffer){
-      // W 착지 자동평타: 평타명령(atkTarget)과 별개로 wAutoTarget에 저장해 계속 평타를 치게 함
-      // 버퍼된 다음 스킬이 대기 중이면 자동평타 스킵 (어차피 곧 캔슬될 것)
-      P.wAutoTarget=inRange;
-      P.atkWindup=true;P.atkWindupTimer=Math.max(0,0.27/atkSpeedMult-0.2);
-      P.atkWindupTarget=inRange;moveTarget=null;sfxAtk();
-    }
-    // 범위 밖인 경우: atkTarget이 유지됐다면 processAutoAttack이 추격, null이면 정지
   }
+  if(any) addStack(); // 여러 명을 맞혀도 스택은 1개만
+  return any;
+}
+
+// W 착지 자동평타 셋업: 착지 지점이 평타 사거리 안에 적이 있으면 자동평타 시작.
+//  후딜의 영향을 받지 않도록 executeWTeleport에서 순간이동 직후 즉시 호출한다.
+function setupWLandingAutoAttack(){
+  if(!settings.autoAtk) return; // 설정: 스킬 이후 자동평타 OFF
+  if(P.eCasting||P.qCasting||P.rCasting||P.dashing||P.hopping||P.atkWindup) return;
+  let inRange=null, bd=Infinity;
+  for(const d of dummies){
+    if(!d.alive)continue;
+    const dd=dist(P,d);
+    if(dd<=CONF.atkRange+d.r&&dd<bd){bd=dd;inRange=d;}
+  }
+  if(inRange){
+    // 평타명령(atkTarget)과 별개로 wAutoTarget에 저장해 계속 평타를 치게 함
+    P.wAutoTarget=inRange;
+    P.atkWindup=true;P.atkWindupTimer=Math.max(0,0.27/atkSpeedMult-0.2);
+    P.atkWindupTarget=inRange;moveTarget=null;sfxAtk();
+  }
+  // 범위 밖인 경우: atkTarget이 유지됐다면 processAutoAttack이 추격, null이면 정지
+}
+
+// W 후딜 종료 시: 버퍼된 다음 스킬(2번째 W 포함)이 있으면 발동. (착지 자동평타는 executeWTeleport에서 이미 즉시 시작됨)
+function onWPostDelayEnd(){
+  // 후딜 중 다른 스킬을 즉시 시전했을 수 있으므로, 그 스킬이 아직 시전 중이면 여기서 W를 흘리지 않는다.
+  // (버퍼는 그대로 두고, 시전이 끝나면 위 자동 플러시가 처리)
+  if(skillBuffer||wBuffer2){ if(!isCasting()) flushBuffer(); }
 }
 
 // ============================================================
@@ -1050,7 +1186,7 @@ function castE(){
         eProj.eHit=true;
         const behind=a;
         const edgX=d.x+Math.cos(behind)*1.2*PX, edgY=d.y+Math.sin(behind)*1.2*PX;
-        effects.push({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000});
+        recordEffect({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000});
         schedule(CONF.eDaggerDelay,()=>{spawnDagger(edgX,edgY);});
       }
     }
@@ -1102,7 +1238,8 @@ function castR(){
         rHitAll.add(d);
       }
     }
-    effects.push({type:'raoe',x:castX,y:castY,r:178,t:0,mt:25});
+    // 원작 GIF: 시그니처 핫핑크 초승달 아크가 휘감기듯 회전하며 소멸
+    recordEffect({type:'rcrescent',x:castX,y:castY,r:178,a0:Math.random()*Math.PI*2,t:0,mt:22});
     shake.t=10;shake.m=6;
 
     // X자 방향: 좌하, 우하, 우상, 좌상 순서로 펼침
@@ -1142,9 +1279,11 @@ function castR(){
         daggers[daggers.length-1].rIdx = i;
 
         // 슬래시 이펙트
-        effects.push({type:'rslash',x1:castX,y1:castY,
+        recordEffect({type:'rslash',x1:castX,y1:castY,
           x2:dgX,y2:dgY,
           t:0,mt:20,w:CONF.rDaggerPathW});
+        // 원작 GIF: 단검 착지 지점의 부드러운 핑크 글로우
+        recordEffect({type:'rglow',x:dgX,y:dgY,r:46,t:0,mt:30});
 
         // 마지막 단검 배치 후 R hit/miss 사운드
       },'R');
@@ -1163,14 +1302,15 @@ function castR(){
       checkDaggerPickup();
       const _footPicked = daggers.length<_nDagBefore;
       if(_wWasReady){
-        // W가 준비돼 있었으면(쿨초모드 등) 선입력 W 발동 → 발밑 회수로 생긴 0.05쿨이 막지 않도록 해제
+        // W가 준비돼 있었으면(쿨초모드 등) 선입력 W 발동 → 발밑(걸어서) 회수는 쿨을 0으로 두어 막지 않음
         if(_footPicked){ P.wCd=0; P.wInternalCd=0; }
       } else if(skillBuffer===castW){
-        // W가 원래 쿨 중이었으면 선입력 W는 발동하지 않음 (발밑단검만 회수). "준비 안 됨"도 안 뜨게 버퍼 비움.
+        // W가 원래 쿨 중이었으면 선입력 W는 발동하지 않음 (발밑단검만 회수). "준비 안 됨"도 안 뜨게 버퍼 비움(2칸 모두).
         skillBuffer=null; skillBufferMouse=null;
+        wBuffer2=null; wBuffer2Mouse=null;
       }
       // R 적중 시 자동평타 (W 착지 자동평타와 동일 방식, 평타명령과 별개)
-      if(rAnyHit){
+      if(rAnyHit && settings.autoAtk){
         let near=null, bd=Infinity;
         for(const d of rHitAll){
           if(!d.alive)continue;
@@ -1180,9 +1320,9 @@ function castR(){
         if(near) P.wAutoTarget=near;
       }
       flushBuffer(); // 선입력 W 발동
-      // 발밑단검을 회수했다면(쿨초), 이어진 W가 적에게 비약하며 건 풀 쿨(wCd)에 그 쿨초가 덮이지 않도록 보존.
+      // 발밑단검을 걸어서 회수했다면(쿨 0초), 이어진 W가 적에게 비약하며 건 풀 쿨(wCd)에 그 초기화가 덮이지 않도록 보존.
       //  (내부 쿨 wInternalCd=0.3은 그대로 둔다 — 사용자 요청)
-      if(_footPicked && P.wCd>0.05){ P.wCd=0.05; }
+      if(_footPicked && P.wCd>0.05){ P.wCd=0; }
     },'R');
   },'R');
 }
@@ -1194,8 +1334,8 @@ function hitDummy(d, dmg, dir, grantStack){
   if(!d.alive)return;
   d.hitFlash=6;
   sfxHit();
-  effects.push({type:'hit',x:d.x+Math.cos(dir)*12,y:d.y+Math.sin(dir)*12,t:0,mt:10});
-  effects.push({type:'dmg',x:d.x,y:d.y-d.r-15,t:0,mt:40,val:dmg});
+  recordEffect({type:'hit',x:d.x+Math.cos(dir)*12,y:d.y+Math.sin(dir)*12,t:0,mt:10});
+  recordEffect({type:'dmg',x:d.x,y:d.y-d.r-15,t:0,mt:40,val:dmg});
   shake.t=3;shake.m=2;
   if(grantStack)addStack();
   if(P.dActive){P.dActive=false;P.dTimer=0;playSfx('cloakend');}
@@ -1228,14 +1368,14 @@ function castBlink(){
   for(let i=0;i<12;i++){
     const pa=Math.random()*Math.PI*2;
     const sp=40+Math.random()*60;
-    effects.push({type:'blink',x:ox,y:oy,vx:Math.cos(pa)*sp,vy:Math.sin(pa)*sp,t:0,mt:25});
+    recordEffect({type:'blink',x:ox,y:oy,vx:Math.cos(pa)*sp,vy:Math.sin(pa)*sp,t:0,mt:25});
   }
   P.x=nx;P.y=ny;
   // 파란색 파티클 (도착지)
   for(let i=0;i<12;i++){
     const pa=Math.random()*Math.PI*2;
     const sp=40+Math.random()*60;
-    effects.push({type:'blink',x:nx,y:ny,vx:Math.cos(pa)*sp,vy:Math.sin(pa)*sp,t:0,mt:25});
+    recordEffect({type:'blink',x:nx,y:ny,vx:Math.cos(pa)*sp,vy:Math.sin(pa)*sp,t:0,mt:25});
   }
   moveTarget=null;
   P.blinkCd=applyCdr(CONF.blinkCd);
@@ -1264,10 +1404,11 @@ function executeD(tgt){
   P.dCd=cdResetMode?0:CONF.dCd;
   playSfx('daggerskill2');
   // D2 이후 자동평타
-  if(tgt.alive){P.atkWindup=true;P.atkWindupTimer=0.167/atkSpeedMult;P.atkWindupTarget=tgt;P.atkTarget=tgt;sfxAtk();}
+  if(tgt.alive && settings.autoAtk){P.atkWindup=true;P.atkWindupTimer=0.167/atkSpeedMult;P.atkWindupTarget=tgt;P.atkTarget=tgt;sfxAtk();}
 }
 function checkDPending(){
   if(!dPending||P.dPhase!==1)return;
+  if(P.wPostDelay>0)return;
   if(!dPending.alive){dPending=null;return;}
   // E 넉백 중엔 대기 (D2는 E 딜레이를 캔슬하지 못함)
   if(P.eCasting)return;
@@ -1315,14 +1456,14 @@ function castD(){
 // EFFECTS
 // ============================================================
 function addSlash(x,y,a,len,col,w){
-  effects.push({type:'slash',x1:x+Math.cos(a)*15,y1:y+Math.sin(a)*15,
+  recordEffect({type:'slash',x1:x+Math.cos(a)*15,y1:y+Math.sin(a)*15,
     x2:x+Math.cos(a)*len,y2:y+Math.sin(a)*len,t:0,mt:12,col,w});
 }
 function addRectEffect(x,y,a,len,w,col){
-  effects.push({type:'rect',x,y,a,len,w,t:0,mt:15,col});
+  recordEffect({type:'rect',x,y,a,len,w,t:0,mt:15,col});
 }
 function addFanEffect(x,y,a,r,ha,col){
-  effects.push({type:'fan',x,y,a,r,ha,t:0,mt:18,col});
+  recordEffect({type:'fan',x,y,a,r,ha,t:0,mt:18,col});
 }
 
 // ============================================================
@@ -1330,6 +1471,8 @@ function addFanEffect(x,y,a,r,ha,col){
 // ============================================================
 function update(rdt){
   tick=rdt||dt; // 실제 경과 시간 사용
+  tickRecord();  // 콤보 녹화 위치 샘플링
+  tickGuide();   // 콤보 재생 진행/가이드
   tickScheduler(tick);
   // Timers
   if(P.atkCd>0)P.atkCd-=tick;
@@ -1342,9 +1485,15 @@ function update(rdt){
   if(P.rInternalCd>0)P.rInternalCd-=tick;
   if(P.blinkCd>0)P.blinkCd-=tick;
   if(P.dCd>0)P.dCd-=tick;
+  // W 후딜(0.15초): 만료 시 버퍼된 다음 스킬(2번째 W 포함) 발동 또는 착지 자동평타 판정
+  if(P.wPostDelay>0){
+    P.wPostDelay-=tick;
+    if(P.wPostDelay<=0){ P.wPostDelay=0; onWPostDelayEnd(); }
+  }
   // 쿨다운 만료 시 선입력 버퍼 자동 플러시 (버퍼된 fn이 자체적으로 CD 재검사)
   // 단, E 시전 중 W/블링크는 20프레임(ewbCancelReady) 전까지 자동 flush 금지 → 전용 스케줄에서만 캔슬
-  if(skillBuffer && !isCasting() && !P.atkWindup && !P.atkPending){
+  // W 후딜 중에는 자동 플러시 금지 → 후딜 중 버퍼된 W는 onWPostDelayEnd()가 후딜 종료 시 발동
+  if((skillBuffer||wBuffer2) && !isCasting() && P.wPostDelay<=0 && !P.atkWindup && !P.atkPending){
     if(P.eCasting && !P.ewbCancelReady && (skillBuffer===castW||skillBuffer===castBlink)){
       // 대기: 20프레임 전용 스케줄이 처리
     } else {
@@ -1464,7 +1613,7 @@ function update(rdt){
   processAutoAttack();
 
   // Movement (이동은 대시/시전/Q시전/E시전 중 차단)
-  if(!P.dashing&&!P.rCasting&&!P.hopping&&!P.eCasting&&!P.eHop2Active&&P.eMoveLockTimer<=0&&!P.qCasting&&moveTarget){
+  if(!P.dashing&&!P.rCasting&&!P.hopping&&!P.eCasting&&!P.eHop2Active&&P.eMoveLockTimer<=0&&!P.qCasting&&P.wPostDelay<=0&&moveTarget){
     if(P.atkPending) cancelAttack(); // 이동 시 평타 취소
     const d=dist(P,moveTarget);
     if(d<4){moveTarget=null}
@@ -1507,7 +1656,7 @@ function update(rdt){
           // Dagger behind enemy (delayed)
           const behind=Math.atan2(p.vy,p.vx);
           const edgX=d.x+Math.cos(behind)*1.2*PX, edgY=d.y+Math.sin(behind)*1.2*PX;
-          effects.push({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000});
+          recordEffect({type:'dagdrop',x:edgX,y:edgY,sx:d.x,sy:d.y,t:0,mt:9999,spawnTime:performance.now()+CONF.eDaggerDelay*1000});
           schedule(CONF.eDaggerDelay,()=>{
             spawnDagger(edgX,edgY);
           });
@@ -1543,10 +1692,8 @@ function update(rdt){
   }
 
   // Effects
-  for(let i=effects.length-1;i>=0;i--){
-    effects[i].t++;
-    if(effects[i].t>=effects[i].mt)effects.splice(i,1);
-  }
+  updateEffectsArr(effects);
+  if(ghostPlaying)updateEffectsArr(ghostEffects); // 고스트 이펙트도 동일 규칙으로 진행
 
   // Shake
   if(shakeEnabled&&shake.t>0){shake.t--;shake.x=(Math.random()-.5)*shake.m*2;shake.y=(Math.random()-.5)*shake.m*2}
@@ -1604,47 +1751,7 @@ function draw(){
   }
 
   // ---- DAGGERS on field ----
-  for(const dg of daggers){
-    const pulse=Math.sin(dg.age*4)*.15+.85;
-    ctx.save();
-    ctx.translate(dg.x,dg.y);
-    // W 사거리 원 (얇은 파란색 타원) — R 단검 방향별 설정. 비R 단검은 좌하(0) 설정을 사용
-    {
-      const wv = wRingVis[(dg.rIdx!=null)?dg.rIdx:0];
-      const wrx = CONF.wRange*wv.scale;
-      const wry = wrx*wv.flatten;
-      ctx.strokeStyle='rgba(60,140,255,.08)';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.ellipse(0,0, wrx, wry, wv.angle*Math.PI/180, 0, Math.PI*2);ctx.stroke();
-    }
-    const _sq = (dg.rIdx!=null) ? rDagVis[dg.rIdx].squish : dagVis.squish;
-    ctx.scale(dagVis.scale, dagVis.scale*_sq);
-    // 원형 범위 (파란색)
-    ctx.strokeStyle='rgba(60,130,255,.35)';ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.arc(0,0,CONF.daggerPickupR,0,Math.PI*2);ctx.stroke();
-    // 수직 빔 (원작 비콘)
-    {
-      const beamH=100;
-      const bg=ctx.createLinearGradient(0,0,0,-beamH);
-      bg.addColorStop(0,`rgba(255,60,60,${0.75*pulse})`);
-      bg.addColorStop(0.5,`rgba(255,40,40,${0.35*pulse})`);
-      bg.addColorStop(1,'rgba(255,40,40,0)');
-      ctx.fillStyle=bg;
-      ctx.shadowColor='#f33';ctx.shadowBlur=10;
-      ctx.fillRect(-3,-beamH,6,beamH);
-      ctx.fillStyle=`rgba(255,90,90,${0.5*pulse})`;
-      ctx.beginPath();ctx.ellipse(0,0,7,3,0,0,Math.PI*2);ctx.fill();
-      ctx.shadowBlur=0;
-    }
-    // 단검 마커 (빨간색)
-    ctx.rotate(dg.age*2);
-    ctx.fillStyle=`rgba(220,50,50,${pulse})`;
-    ctx.shadowColor='#f44';ctx.shadowBlur=8;
-    ctx.beginPath();
-    ctx.moveTo(0,-8);ctx.lineTo(5,0);ctx.lineTo(0,8);ctx.lineTo(-5,0);ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur=0;
-    ctx.restore();
-  }
+  drawDaggersArr(daggers);
 
   // ---- DUMMIES ----
   for(const d of dummies){
@@ -1679,30 +1786,10 @@ function draw(){
   }
 
   // ---- PROJECTILES ----
-  for(const p of projectiles){
-    const a=Math.atan2(p.vy,p.vx);
-    // 빨간색 트레일
-    const tLen=p.isE?18:14;
-    ctx.strokeStyle='rgba(220,50,50,0.5)';ctx.lineWidth=p.isE?4:3;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-Math.cos(a)*tLen,p.y-Math.sin(a)*tLen);ctx.stroke();
-    // 하얀 단검
-    ctx.save();
-    ctx.translate(p.x,p.y);
-    ctx.rotate(a);
-    if(p.isE){
-      ctx.fillStyle='#fff';ctx.shadowColor='#f66';ctx.shadowBlur=8;
-      ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-6,-4);ctx.lineTo(-3,0);ctx.lineTo(-6,4);ctx.closePath();ctx.fill();
-    } else {
-      ctx.fillStyle='#fff';ctx.shadowColor='#f66';ctx.shadowBlur=6;
-      ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(-5,-3);ctx.lineTo(-2,0);ctx.lineTo(-5,3);ctx.closePath();ctx.fill();
-    }
-    ctx.shadowBlur=0;
-    ctx.restore();
-    // Trail
-    ctx.strokeStyle=p.isE?'rgba(100,200,255,.3)':'rgba(180,200,255,.2)';
-    ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x,p.y);
-    ctx.lineTo(p.x-p.vx*3,p.y-p.vy*3);ctx.stroke();
-  }
+  drawProjectilesArr(projectiles);
+
+  // ---- GHOST (콤보 재생): 고스트 단검·투사체·이펙트·본체 ----
+  drawGhostAll();
 
   // ---- PLAYER ----
   const px=P.x, py=P.y;
@@ -1837,7 +1924,43 @@ function draw(){
   ctx.globalAlpha=1;
 
   // ---- EFFECTS ----
-  for(const e of effects){
+  drawEffectsArr(effects);
+
+  // W target highlight (show what W would target)
+  if(P.wCd<=0&&!P.dashing&&!P.rCasting){
+    let best=null,bd=Infinity,bvx=0,bvy=0;
+    for(const d of dummies){
+      if(!d.alive)continue;
+      const dm=Math.hypot(mouse.x-d.x,mouse.y-d.y);
+      const dp=dist(P,d);
+      if(dm<d.r+30&&dp<=CONF.wRange&&dm<bd){ bd=dm;best=d;bvx=d.x;bvy=d.y; }
+    }
+    for(const dg of daggers){
+      const dm=Math.hypot(mouse.x-dg.x,mouse.y-dg.y);
+      const dp=dist(P,dg);
+      if(dm<30&&dp<=CONF.wRange&&dm<bd){ bd=dm;best=dg;bvx=dg.x;bvy=dg.y; }
+    }
+    if(best){
+      ctx.strokeStyle='rgba(80,200,255,.25)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(bvx,bvy,20,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(80,200,255,.1)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(P.x,P.y);ctx.lineTo(bvx,bvy);ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+
+  // 은신 필터
+  if(P.dActive){
+    ctx.fillStyle='rgba(10,20,50,0.15)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+// 이펙트 한 배열을 그림 (실제·고스트 공용)
+function drawEffectsArr(arr){
+  for(const e of arr){
     const p=e.t/e.mt;
     const a=1-p;
     if(e.type==='slash'){
@@ -1924,11 +2047,12 @@ function draw(){
       ctx.strokeStyle=`rgba(220,50,50,${a*.5})`;ctx.lineWidth=CONF.wWidth*0.5*(1-p);ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
     }else if(e.type==='rslash'){
-      ctx.strokeStyle=`rgba(162,22,67,${a})`;ctx.lineWidth=e.w*(1-p*.5);ctx.lineCap='round';
-      ctx.shadowColor='#A21643';ctx.shadowBlur=10*a;
+      // 원작 GIF: 핫핑크 슬래시 + 백색 코어
+      ctx.strokeStyle=`rgba(255,46,99,${a})`;ctx.lineWidth=e.w*(1-p*.5);ctx.lineCap='round';
+      ctx.shadowColor='#ff2e63';ctx.shadowBlur=14*a;
       ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
       ctx.shadowBlur=0;
-      ctx.strokeStyle=`rgba(255,255,255,${a*.6})`;ctx.lineWidth=2;
+      ctx.strokeStyle=`rgba(255,230,236,${a*.7})`;ctx.lineWidth=2.5;
       ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
     }else if(e.type==='blink'){
       e.x+=e.vx*tick;e.y+=e.vy*tick;
@@ -1971,46 +2095,321 @@ function draw(){
       }else{
         ctx.beginPath();ctx.arc(e.x1,e.y1,hw,0,Math.PI*2);ctx.stroke();
       }
+    }else if(e.type==='rcrescent'){
+      // R 핫핑크 초승달 아크 (원작 GIF의 시그니처) — 휘감기듯 회전하며 소멸
+      const rr=e.r*0.75*(0.55+0.45*Math.min(1,e.t/6));
+      const sweep=Math.PI*1.45;
+      const a0=e.a0+p*0.9;
+      ctx.lineCap='round';
+      ctx.shadowColor='#ff2e63';ctx.shadowBlur=26*a;
+      ctx.strokeStyle=`rgba(255,46,99,${a*0.85})`;ctx.lineWidth=26*(1-p*0.45);
+      ctx.beginPath();ctx.arc(e.x,e.y,rr,a0,a0+sweep);ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle=`rgba(255,200,215,${a*0.9})`;ctx.lineWidth=7*(1-p*0.5);
+      ctx.beginPath();ctx.arc(e.x,e.y,rr,a0+0.12,a0+sweep-0.12);ctx.stroke();
+      // 범위 내부 옅은 붉은 채움
+      ctx.fillStyle=`rgba(255,46,99,${a*0.07})`;
+      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+    }else if(e.type==='rglow'){
+      // R 단검 착지 핑크 글로우 (원작 GIF: 부드럽게 퍼지다 사라짐)
+      const gr=e.r*(0.6+p*0.5);
+      const gg=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,gr);
+      gg.addColorStop(0,`rgba(255,235,238,${a*0.55})`);
+      gg.addColorStop(0.5,`rgba(255,120,150,${a*0.3})`);
+      gg.addColorStop(1,'rgba(255,80,120,0)');
+      ctx.fillStyle=gg;
+      ctx.beginPath();ctx.arc(e.x,e.y,gr,0,Math.PI*2);ctx.fill();
     }
   }
-
-  // W target highlight (show what W would target)
-  if(P.wCd<=0&&!P.dashing&&!P.rCasting){
-    // Find best W target near mouse
-    let best=null,bd=Infinity,bvx=0,bvy=0;
-    for(const d of dummies){
-      if(!d.alive)continue;
-      const dm=Math.hypot(mouse.x-d.x,mouse.y-d.y);
-      const dp=dist(P,d);
-      if(dm<d.r+30&&dp<=CONF.wRange&&dm<bd){
-        bd=dm;best=d;bvx=d.x;bvy=d.y;
-      }
-    }
-    for(const dg of daggers){
-      const dm=Math.hypot(mouse.x-dg.x,mouse.y-dg.y);
-      const dp=dist(P,dg);
-      if(dm<30&&dp<=CONF.wRange&&dm<bd){
-        bd=dm;best=dg;bvx=dg.x;bvy=dg.y;
-      }
-    }
-    if(best){
-      ctx.strokeStyle='rgba(80,200,255,.25)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-      ctx.beginPath();ctx.arc(bvx,bvy,20,0,Math.PI*2);ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.strokeStyle='rgba(80,200,255,.1)';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(P.x,P.y);ctx.lineTo(bvx,bvy);ctx.stroke();
-    }
-  }
-
-  ctx.restore();
-
-  // 은신 필터
-  if(P.dActive){
-    ctx.fillStyle='rgba(10,20,50,0.15)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
-
 }
+
+// ============================================================
+// 콤보 가이드: 고스트 녹화/재생 + 공유 코드 + 따라 누르기
+// ============================================================
+const COMBO_VER=13;          // 데이터 버전(맵·스킬 타이밍 호환 기준). 게임 로직 변경 시 올릴 것
+const REC_HZ=30;             // 위치 샘플링 주파수(Hz)
+
+let recording=false, recTime=0, recLastSample=-1, recFrames=[], recKeys=[];
+let recDag=[], recProj=[], recFx=[];   // 단검 수명 / 투사체 수명 / 이펙트 생성기록
+let liveDag={}, liveProj={}, gidCounter=0; // 추적용 (열려있는 엔티티 id→기록)
+let ghost=null;              // {ver,hz,frames,keys,dag,proj,fx}
+let ghostPlaying=false, ghostTime=0, ghostSeek=0;
+let ghostEffects=[], ghostDag=[], ghostProj=[], ghostFxIdx=0; // 재생용 고스트 엔티티
+
+function setRecUI(){
+  const b=document.getElementById('rec-btn');
+  b.textContent=recording?'■ 정지':'● 녹화';
+  b.style.color=recording?'#f66':'#ddd'; b.style.borderColor=recording?'#a33':'#555';
+}
+function setPlayUI(){
+  const b=document.getElementById('play-btn');
+  b.textContent=ghostPlaying?'■ 중지':'▶ 재생';
+  b.style.color=ghostPlaying?'#5cf':'#ddd'; b.style.borderColor=ghostPlaying?'#37a':'#555';
+}
+function startRecording(){
+  if(ghostPlaying)stopPlayback();
+  recording=true; recTime=0; recLastSample=-1; recFrames=[]; recKeys=[];
+  recDag=[]; recProj=[]; recFx=[]; liveDag={}; liveProj={}; gidCounter=0;
+  for(const d of daggers)d._gid=null;   // 녹화 시작 시점에 이미 있는 엔티티도 새로 추적
+  for(const p of projectiles)p._gid=null;
+  setRecUI(); log('● 콤보 녹화 시작 — 플레이 후 정지를 누르세요');
+}
+function stopRecording(){
+  recording=false; setRecUI();
+  const endMs=Math.round(recTime*1000);
+  for(const id in liveDag)liveDag[id].et=endMs;  liveDag={};   // 열려있던 엔티티 종료 마감
+  for(const id in liveProj)liveProj[id].et=endMs; liveProj={};
+  if(recFrames.length<2){ log('녹화 내용이 너무 짧습니다'); return; }
+  ghost={ver:COMBO_VER, hz:REC_HZ, frames:recFrames.slice(), keys:recKeys.slice(), dag:recDag.slice(), proj:recProj.slice(), fx:recFx.slice()};
+  const ta=document.getElementById('combo-export'); if(ta)ta.value=encodeCombo(ghost);
+  log(`■ 녹화 완료 (${(recFrames[recFrames.length-1][0]/1000).toFixed(1)}초, 단검 ${recDag.length} · 투사체 ${recProj.length} · 이펙트 ${recFx.length}) — 공유 코드 생성됨`);
+}
+function startPlayback(){
+  if(!ghost){ log('재생할 콤보가 없습니다 (녹화하거나 코드를 불러오세요)'); return; }
+  if(recording)stopRecording();
+  ghostPlaying=true; ghostTime=0; ghostSeek=0;
+  ghostEffects=[]; ghostDag=[]; ghostProj=[]; ghostFxIdx=0;
+  setPlayUI(); log('▶ 콤보 재생');
+}
+function stopPlayback(){ ghostPlaying=false; ghostEffects=[]; ghostDag=[]; ghostProj=[]; setPlayUI(); }
+
+// 인코딩: JSON → base64 (유니코드 안전)
+function encodeCombo(g){ try{return btoa(unescape(encodeURIComponent(JSON.stringify(g))));}catch(e){return '';} }
+function decodeCombo(code){
+  try{ const g=JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if(!g||!Array.isArray(g.frames))return null;
+    if(!Array.isArray(g.keys))g.keys=[];
+    if(!Array.isArray(g.dag))g.dag=[];   // 구버전 코드 호환
+    if(!Array.isArray(g.proj))g.proj=[];
+    if(!Array.isArray(g.fx))g.fx=[];
+    return g;
+  }catch(e){ return null; }
+}
+
+// 매 프레임 녹화 (update에서 호출): 위치 샘플 + 단검/투사체 생성·소멸 추적
+function tickRecord(){
+  if(!recording)return;
+  recTime+=tick;
+  trackEntities();
+  if(recTime-recLastSample>=1/REC_HZ){
+    recLastSample=recTime;
+    recFrames.push([Math.round(recTime*1000),Math.round(P.x),Math.round(P.y),Math.round(P.angle*180/Math.PI)]);
+  }
+}
+// 단검·투사체의 등장(st)·퇴장(et) 시각을 기록. 단검은 정지·펄스, 투사체는 등속 직선이므로
+// 생성 시점만 기록해두면 재생 때 위치를 계산으로 복원할 수 있어 데이터가 작다.
+function trackEntities(){
+  const ms=Math.round(recTime*1000);
+  const seenD=new Set();
+  for(const d of daggers){
+    if(d._gid==null)d._gid=++gidCounter;
+    seenD.add(d._gid);
+    if(!liveDag[d._gid]){ const o={st:ms,et:-1,x:Math.round(d.x),y:Math.round(d.y),ri:(d.rIdx!=null?d.rIdx:0)}; liveDag[d._gid]=o; recDag.push(o); }
+  }
+  for(const id in liveDag){ if(!seenD.has(+id)){ liveDag[id].et=ms; delete liveDag[id]; } }
+  const seenP=new Set();
+  for(const p of projectiles){
+    if(p._gid==null)p._gid=++gidCounter;
+    seenP.add(p._gid);
+    if(!liveProj[p._gid]){ const o={st:ms,et:-1,x:Math.round(p.x),y:Math.round(p.y),vx:Math.round(p.vx*100)/100,vy:Math.round(p.vy*100)/100,e:p.isE?1:0}; liveProj[p._gid]=o; recProj.push(o); }
+  }
+  for(const id in liveProj){ if(!seenP.has(+id)){ liveProj[id].et=ms; delete liveProj[id]; } }
+}
+// 이펙트 생성 가로채기: 녹화 중이면 생성 시점·필드를 기록 (effects.push 대체)
+function recordEffect(e){
+  if(recording){
+    const o={};
+    for(const k in e){ const v=e[k]; o[k]=(typeof v==='number')?Math.round(v*100)/100:v; }
+    if(typeof e.spawnTime==='number'){ o._spawnOff=Math.round(e.spawnTime-performance.now()); delete o.spawnTime; } // 절대시각 → 상대오프셋
+    recFx.push([Math.round(recTime*1000),o]);
+  }
+  effects[effects.length]=e;
+  return e;
+}
+// 이펙트 배열 진행 (실제·고스트 공용): t 증가 + 수명 종료 제거
+function updateEffectsArr(arr){
+  for(let i=arr.length-1;i>=0;i--){ arr[i].t++; if(arr[i].t>=arr[i].mt)arr.splice(i,1); }
+}
+// 재생 시 보간된 고스트 위치
+function ghostPose(){
+  if(!ghost||!ghost.frames.length)return null;
+  const tms=ghostTime*1000, f=ghost.frames;
+  let i=ghostSeek;
+  while(i<f.length-1 && f[i+1][0]<=tms)i++;
+  while(i>0 && f[i][0]>tms)i--;
+  ghostSeek=i;
+  const a=f[i], b=f[Math.min(i+1,f.length-1)];
+  const span=(b[0]-a[0])||1, k=Math.min(1,Math.max(0,(tms-a[0])/span));
+  return {x:a[1]+(b[1]-a[1])*k, y:a[2]+(b[2]-a[2])*k, deg:a[3]+(b[3]-a[3])*k};
+}
+function drawGhost(){
+  const p=ghostPose(); if(!p)return;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.2)';
+  ctx.beginPath();ctx.ellipse(p.x,p.y+P.r+2,P.r*.7,3.5,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=0.4;
+  if(playerImg.complete&&playerImg.naturalWidth){
+    const sSize=P.r*2.2;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.deg*Math.PI/180-Math.PI/2);
+    ctx.drawImage(playerImg,-sSize/2,-sSize/2,sSize,sSize);ctx.restore();
+  } else { ctx.fillStyle='#7cf';ctx.beginPath();ctx.arc(p.x,p.y,P.r,0,Math.PI*2);ctx.fill(); }
+  ctx.globalAlpha=0.9;ctx.fillStyle='#5cf';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('GHOST',p.x,p.y-P.r-8);
+  ctx.restore();
+}
+// 바닥 단검 배열 그리기 (실제·고스트 공용)
+function drawDaggersArr(arr){
+  for(const dg of arr){
+    const pulse=Math.sin(dg.age*4)*.15+.85;
+    ctx.save();
+    ctx.translate(dg.x,dg.y);
+    {
+      const wv = wRingVis[(dg.rIdx!=null)?dg.rIdx:0];
+      const wrx = CONF.wRange*wv.scale;
+      const wry = wrx*wv.flatten;
+      ctx.strokeStyle='rgba(60,140,255,.08)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.ellipse(0,0, wrx, wry, wv.angle*Math.PI/180, 0, Math.PI*2);ctx.stroke();
+    }
+    const _sq = (dg.rIdx!=null) ? rDagVis[dg.rIdx].squish : dagVis.squish;
+    ctx.scale(dagVis.scale, dagVis.scale*_sq);
+    ctx.strokeStyle='rgba(60,130,255,.35)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(0,0,CONF.daggerPickupR,0,Math.PI*2);ctx.stroke();
+    {
+      const beamH=100;
+      const bg=ctx.createLinearGradient(0,0,0,-beamH);
+      bg.addColorStop(0,`rgba(255,60,60,${0.75*pulse})`);
+      bg.addColorStop(0.5,`rgba(255,40,40,${0.35*pulse})`);
+      bg.addColorStop(1,'rgba(255,40,40,0)');
+      ctx.fillStyle=bg;
+      ctx.shadowColor='#f33';ctx.shadowBlur=10;
+      ctx.fillRect(-3,-beamH,6,beamH);
+      ctx.fillStyle=`rgba(255,90,90,${0.5*pulse})`;
+      ctx.beginPath();ctx.ellipse(0,0,7,3,0,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+    }
+    ctx.rotate(dg.age*2);
+    ctx.fillStyle=`rgba(220,50,50,${pulse})`;
+    ctx.shadowColor='#f44';ctx.shadowBlur=8;
+    ctx.beginPath();
+    ctx.moveTo(0,-8);ctx.lineTo(5,0);ctx.lineTo(0,8);ctx.lineTo(-5,0);ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.restore();
+  }
+}
+// 투사체(날아가는 단검) 배열 그리기 (실제·고스트 공용)
+function drawProjectilesArr(arr){
+  for(const p of arr){
+    const a=Math.atan2(p.vy,p.vx);
+    const tLen=p.isE?18:14;
+    ctx.strokeStyle='rgba(220,50,50,0.5)';ctx.lineWidth=p.isE?4:3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-Math.cos(a)*tLen,p.y-Math.sin(a)*tLen);ctx.stroke();
+    ctx.save();
+    ctx.translate(p.x,p.y);
+    ctx.rotate(a);
+    if(p.isE){
+      ctx.fillStyle='#fff';ctx.shadowColor='#f66';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-6,-4);ctx.lineTo(-3,0);ctx.lineTo(-6,4);ctx.closePath();ctx.fill();
+    } else {
+      ctx.fillStyle='#fff';ctx.shadowColor='#f66';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(-5,-3);ctx.lineTo(-2,0);ctx.lineTo(-5,3);ctx.closePath();ctx.fill();
+    }
+    ctx.shadowBlur=0;
+    ctx.restore();
+    ctx.strokeStyle=p.isE?'rgba(100,200,255,.3)':'rgba(180,200,255,.2)';
+    ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x,p.y);
+    ctx.lineTo(p.x-p.vx*3,p.y-p.vy*3);ctx.stroke();
+  }
+}
+// 고스트 일체 그리기: 단검·투사체·이펙트(반투명) + 본체
+function drawGhostAll(){
+  if(!ghostPlaying||!ghost){ return; }
+  ctx.save();
+  ctx.globalAlpha=0.55;
+  drawDaggersArr(ghostDag);
+  drawProjectilesArr(ghostProj);
+  drawEffectsArr(ghostEffects);
+  ctx.restore();
+  drawGhost();
+}
+// 재생 진행: ghostTime 전진 + 고스트 엔티티 갱신 + 종료 감지 (update에서 호출)
+function tickGuide(){
+  if(!ghostPlaying||!ghost)return;
+  ghostTime+=tick;
+  const gt=ghostTime*1000;
+  // 도달한 이펙트 생성 (fx는 시각 오름차순)
+  while(ghostFxIdx<ghost.fx.length && ghost.fx[ghostFxIdx][0]<=gt){
+    const rec=ghost.fx[ghostFxIdx][1]; const e={};
+    for(const k in rec)e[k]=rec[k];
+    if(typeof e._spawnOff==='number')e.spawnTime=performance.now()+e._spawnOff; // 재생 시각 기준으로 재설정
+    ghostEffects.push(e); ghostFxIdx++;
+  }
+  // 단검: 현재 살아있는 것 재구성 (정지 + age로 펄스)
+  ghostDag.length=0;
+  for(const d of ghost.dag){ const et=d.et<0?Infinity:d.et; if(d.st<=gt&&gt<et)ghostDag.push({x:d.x,y:d.y,rIdx:d.ri,age:(gt-d.st)/1000}); }
+  // 투사체: 등속 직선으로 위치 계산 (vx,vy는 프레임당 이동량 → 60fps 환산)
+  ghostProj.length=0;
+  for(const p of ghost.proj){ const et=p.et<0?Infinity:p.et; if(p.st<=gt&&gt<et){ const fr=(gt-p.st)/(1000/60); ghostProj.push({x:p.x+p.vx*fr,y:p.y+p.vy*fr,vx:p.vx,vy:p.vy,isE:!!p.e}); } }
+  // ghostEffects의 t 진행은 update()에서 updateEffectsArr로 처리
+  const endMs=ghost.frames[ghost.frames.length-1][0];
+  if(gt>endMs+800){ stopPlayback(); log('재생 완료'); }
+}
+// 예시 콤보 프리셋 (etc/v1.3_combo.txt에서 로드)
+let comboPresets={};
+fetch('etc/v1.3_combo.txt').then(r=>r.text()).then(txt=>{
+  // 형식: "# 이름" 다음 줄에 base64 공유 코드
+  const lines=txt.split(/\r?\n/);
+  let cur=null;
+  for(const line of lines){
+    const t=line.trim();
+    if(!t)continue;
+    if(t[0]==='#'){ cur=t.replace(/^#+\s*/,''); }
+    else if(cur){ comboPresets[cur]=t; cur=null; }
+  }
+}).catch(()=>{ log('예시 콤보 파일을 불러오지 못했습니다 (etc/v1.3_combo.txt)'); });
+
+function playPreset(name){
+  const code=comboPresets[name];
+  if(!code){ log(`${name} 콤보를 아직 불러오지 못했습니다`); return; }
+  const g=decodeCombo(code);
+  if(!g){ log(`${name} 콤보 데이터가 손상되었습니다`); return; }
+  ghost=g;
+  startPlayback();
+  log(`▶ ${name} 쉐도우 재생`);
+}
+
+// 버튼/모달 배선
+(()=>{
+  document.getElementById('rec-btn').addEventListener('click',()=>{ recording?stopRecording():startRecording(); });
+  document.getElementById('play-btn').addEventListener('click',()=>{ ghostPlaying?stopPlayback():startPlayback(); });
+  document.getElementById('preset-7').addEventListener('click',()=>playPreset('7단비약'));
+  document.getElementById('preset-9').addEventListener('click',()=>playPreset('9단비약'));
+  document.getElementById('preset-12').addEventListener('click',()=>playPreset('12단비약'));
+  const modal=document.getElementById('combo-modal');
+  function comboMsg(t,c){const m=document.getElementById('combo-msg');m.textContent=t;m.style.color=c;}
+  document.getElementById('combo-code-btn').addEventListener('click',()=>{ if(ghost)document.getElementById('combo-export').value=encodeCombo(ghost); comboMsg('',''); modal.classList.add('show'); });
+  document.getElementById('combo-close').addEventListener('click',()=>modal.classList.remove('show'));
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show');});
+  document.getElementById('combo-copy').addEventListener('click',()=>{
+    const ta=document.getElementById('combo-export');
+    if(!ta.value){comboMsg('먼저 녹화를 하세요','#f66');return;}
+    ta.select();
+    const done=()=>comboMsg('복사되었습니다!','#5f5');
+    if(navigator.clipboard)navigator.clipboard.writeText(ta.value).then(done,()=>{try{document.execCommand('copy');done();}catch(e){comboMsg('복사 실패 — 수동 복사하세요','#f66');}});
+    else {try{document.execCommand('copy');done();}catch(e){comboMsg('복사 실패 — 수동 복사하세요','#f66');}}
+  });
+  document.getElementById('combo-load').addEventListener('click',()=>{
+    const code=document.getElementById('combo-import').value;
+    if(!code.trim()){comboMsg('코드를 붙여넣으세요','#f66');return;}
+    const g=decodeCombo(code);
+    if(!g){comboMsg('잘못된 코드입니다','#f66');return;}
+    ghost=g;
+    document.getElementById('combo-export').value=encodeCombo(g);
+    if(g.ver!==COMBO_VER)comboMsg(`불러옴 (버전 v${g.ver}/현재 v${COMBO_VER}) — 동작이 어긋날 수 있습니다`,'#fc5');
+    else comboMsg('불러오기 완료! 재생을 누르세요','#5f5');
+    log('콤보 코드 불러오기 완료');
+  });
+})();
 
 // ============================================================
 // LOOP (실제 경과 시간 기반)
@@ -2043,7 +2442,7 @@ document.getElementById('cursor-chk').addEventListener('change',e=>{
 });
 document.addEventListener('mousemove',e=>{
   const onCanvas=e.target===canvas;
-  cursorEl.style.display=(customCursor&&onCanvas)?'block':'none';
+  cursorEl.style.display=(customCursor&&onCanvas&&!dummyMode)?'block':'none';
   cursorEl.style.transform=`translate(${e.clientX-CURSOR_W/2}px,${e.clientY-CURSOR_H/2}px)`;
   // 변형 전 레이아웃 중심을 래퍼에서 구함 (transform은 canvas에만 적용)
   const wrap=document.getElementById('canvas-wrap');
@@ -2105,12 +2504,24 @@ function handleRightClick(mx,my){
 }
 
 canvas.addEventListener('mousedown',e=>{
-  if(e.button===2){
+  // 더미 생성/삭제 모드: 마우스 반전과 무관하게 항상 좌클릭 위치에 1회 적용 후 모드 해제
+  if(dummyMode && e.button===0){
+    if(dummyMode==='spawn'){
+      spawnDummy(mouse.x,mouse.y);
+    } else {
+      const closest=dummies.filter(d=>d.alive).sort((a,b)=>dist(mouse,a)-dist(mouse,b))[0];
+      if(closest)closest.alive=false;
+    }
+    setDummyMode(null);
+    return;
+  }
+  const moveBtn=settings.mouseInvert?0:2, atkBtn=settings.mouseInvert?2:0;
+  if(e.button===moveBtn){
     rightDown=true;
     handleRightClick(mouse.x,mouse.y);
     return;
   }
-  if(e.button===0){
+  if(e.button===atkBtn){
     if(aMode){
       // A키 모드: 클릭 지점과 가까운 적을 타겟팅
       aMode=false;
@@ -2128,37 +2539,86 @@ canvas.addEventListener('mousedown',e=>{
 });
 
 canvas.addEventListener('mouseup',e=>{
-  if(e.button===2)rightDown=false;
+  if(e.button===(settings.mouseInvert?0:2))rightDown=false;
 });
 
 document.addEventListener('keydown',e=>{
   if(e.repeat)return; // 키 홀드 시 자동 반복 입력 무시
-  const k=e.key.toLowerCase();
-  if(k==='q')tryOrBuffer(castQ);
-  else if(k==='w'){
-    if(P.qCasting){skillBuffer=castW;skillBufferMouse={x:mouse.x,y:mouse.y};} // Q 시전 중 W: 버퍼만 (Q 캔슬 불가)
-    else if(P.eCasting){skillBuffer=castW;skillBufferMouse={x:mouse.x,y:mouse.y};} // E 도중 W: 항상 버퍼 → 20프레임(ewbCancelReady)에 E 캔슬 후 발사
+  const c=e.code; // 물리 키 기반: 한/영 입력 상태와 무관 (macOS 한글 IME 대응)
+  // 설정창의 키 변경 입력 대기 중이면 게임 입력 대신 바인딩 처리
+  if(captureSlot){
+    e.preventDefault();
+    if(c==='Escape'){captureSlot=null;updateKeyBtns();return;}
+    if(BINDABLE_RE.test(c) && !RESERVED_CODES.has(c)){
+      // 이미 다른 슬롯에 배정된 키면 두 슬롯의 키를 맞교환
+      const other=KEY_SLOTS.find(s=>s!==captureSlot&&keyBind[s]===c);
+      if(other)keyBind[other]=keyBind[captureSlot];
+      keyBind[captureSlot]=c;
+      captureSlot=null;updateKeyBtns();saveSettings();
+    }
+    return;
+  }
+  // 설정창이 열려있는 동안 게임 키 입력 차단
+  if(document.getElementById('settings-modal').classList.contains('show'))return;
+  // 입력 키 → 스킬 슬롯 변환 (커스텀 키 바인딩 + D/F 스왑 반영)
+  let slot;
+  if(c===keyBind.q)slot='q';
+  else if(c===keyBind.w)slot='w';
+  else if(c===keyBind.e)slot='e';
+  else if(c===keyBind.r)slot='r';
+  else if(c==='KeyD')slot=settings.dfSwap?'f':'d';
+  else if(c==='KeyF')slot=settings.dfSwap?'d':'f';
+  else if(c==='KeyA')slot='a';
+  else if(c==='KeyS')slot='s';
+  else if(c==='Backquote')slot='`';
+  else if(c==='Digit1'||c==='Numpad1')slot='1';
+  else if(c==='Digit2'||c==='Numpad2')slot='2';
+  else if(c==='Digit3'||c==='Numpad3')slot='3';
+  else if(c==='Digit4'||c==='Numpad4')slot='4';
+  else slot=null;
+  // 콤보 녹화: 스킬/행동 키 입력을 시각과 함께 기록
+  if(recording && slot && 'qwerdfas'.includes(slot)) recKeys.push([Math.round(recTime*1000),slot]);
+  // 다른(비-W) 스킬 입력은 쌓여있던 2번째 W 선입력을 취소한다.
+  if(slot==='q'||slot==='e'||slot==='r'||slot==='d'||slot==='f'||slot==='s'){ wBuffer2=null; wBuffer2Mouse=null; }
+  if(slot==='q')tryOrBuffer(castQ);
+  else if(slot==='w'){
+    // W는 2회까지 선입력 가능. 시전 중(R/대시/Q/E)이거나 W 후딜 중이면 독립 2칸 버퍼에 쌓고, 아니면 즉시 시전.
+    // (다른 스킬은 후딜 중 즉시 나가지만, W만은 후딜 종료 후 선입력으로 발동)
+    if(isCasting()||P.qCasting||P.eCasting||P.wPostDelay>0){
+      // 후딜 중 W 선입력: 진행 중인 착지 자동평타를 취소(W가 우선) → 후딜 종료 후 onWPostDelayEnd가 W 발동
+      if(P.wPostDelay>0){ P.atkWindup=false; P.atkWindupTarget=null; P.wAutoTarget=null; }
+      bufferW();
+    }
     else tryOrBuffer(castW);
   }
-  else if(k==='e')tryOrBuffer(castE);
-  else if(k==='r')tryOrBuffer(castR);
-  else if(k==='d'){
+  else if(slot==='e')tryOrBuffer(castE);
+  else if(slot==='r')tryOrBuffer(castR);
+  else if(slot==='d'){
     // R 시전 중 D2(2차)는 즉시 사용 불가 → 버퍼에 넣어 R 종료 후 시전 (QWE 선입력과 동일한 로직)
     if(P.rCasting && P.dPhase===1){ skillBuffer=castD; skillBufferMouse={x:mouse.x,y:mouse.y}; }
     else castD();
   }
-  else if(k==='f'){
+  else if(slot==='f'){
     // E 도중 블링크: 20프레임(ewbCancelReady) 전까진 버퍼만 → 전용 스케줄이 20f에 E 캔슬 후 발사
     if(P.eCasting && !P.ewbCancelReady){skillBuffer=castBlink;skillBufferMouse={x:mouse.x,y:mouse.y};}
     else tryOrBuffer(castBlink);
   }
-  else if(k==='a'){aMode=true;}
-  else if(k==='s'){moveTarget=null;P.atkTarget=null;P.wAutoTarget=null;wPending=null;dPending=null;aMode=false;P.atkWindup=false;P.atkWindupTarget=null;cancelAttack();}
-  else if(k==='`'){document.getElementById('cd-reset-btn').click();}
-  else if(k==='1'){document.getElementById('cdr-down').click();}
-  else if(k==='2'){document.getElementById('cdr-up').click();}
-  else if(k==='3')spawnDummy(mouse.x,mouse.y);
-  else if(k==='4'){const closest=dummies.filter(d=>d.alive).sort((a,b)=>dist(mouse,a)-dist(mouse,b))[0];if(closest)closest.alive=false;}
+  else if(slot==='a'){
+    if(settings.moveAtkClick){
+      aMode=true; // 사거리 표시 후 좌클릭으로 타겟 지정
+    } else {
+      // 클릭 없이 즉시 가장 가까운 적에게 평타 (범위 밖이면 접근 후 평타)
+      let best=null,bd=Infinity;
+      for(const d of dummies){ if(!d.alive)continue; const dd=dist(P,d); if(dd<bd){bd=dd;best=d;} }
+      if(best){P.atkTarget=best;moveTarget=null;}
+    }
+  }
+  else if(slot==='s'){moveTarget=null;P.atkTarget=null;P.wAutoTarget=null;wPending=null;dPending=null;aMode=false;P.atkWindup=false;P.atkWindupTarget=null;cancelAttack();}
+  else if(slot==='`'){document.getElementById('cd-reset-btn').click();}
+  else if(slot==='1'){document.getElementById('cdr-down').click();}
+  else if(slot==='2'){document.getElementById('cdr-up').click();}
+  else if(slot==='3')spawnDummy(mouse.x,mouse.y);
+  else if(slot==='4'){const closest=dummies.filter(d=>d.alive).sort((a,b)=>dist(mouse,a)-dist(mouse,b))[0];if(closest)closest.alive=false;}
 });
 
 // CDR UI
@@ -2182,6 +2642,30 @@ document.getElementById('as-down').addEventListener('click',()=>{
   baseAsMult=Math.max(0.72, Math.round((baseAsMult-0.02)*100)/100);
   recalcAs();updateAsUI();log(`공격속도 ${atkSpeedMult.toFixed(2)}`);
 });
+// 더미 생성/삭제 모드 (버튼 클릭 → 다음 좌클릭 위치에 적용)
+let dummyMode=null; // 'spawn' | 'delete' | null
+function setDummyMode(mode){
+  dummyMode=mode;
+  // 더미 배치 중에는 정확한 위치 지정을 위해 기본 시스템 커서 표시, 끝나면 커스텀 커서 복원
+  canvas.style.cursor=mode?'default':(customCursor?'none':'default');
+  if(mode)cursorEl.style.display='none';
+  const sb=document.getElementById('dummy-spawn-btn'), db=document.getElementById('dummy-del-btn');
+  sb.style.background = mode==='spawn'?'#1a3a5a':'#222';
+  sb.style.borderColor = mode==='spawn'?'#5af':'#555';
+  db.style.background = mode==='delete'?'#5a1a1a':'#222';
+  db.style.borderColor = mode==='delete'?'#f55':'#555';
+  document.getElementById('dummy-mode-hint').textContent =
+    mode==='spawn'?'좌클릭한 위치에 더미 생성':
+    mode==='delete'?'좌클릭한 위치의 더미 삭제':
+    '버튼 클릭 후 좌클릭한 위치에 적용';
+}
+document.getElementById('dummy-spawn-btn').addEventListener('click',()=>{
+  setDummyMode(dummyMode==='spawn'?null:'spawn');
+});
+document.getElementById('dummy-del-btn').addEventListener('click',()=>{
+  setDummyMode(dummyMode==='delete'?null:'delete');
+});
+
 document.getElementById('bisaek-chk').addEventListener('change',e=>{
   bisaekActive=e.target.checked;
   recalcAs();updateAsUI();log(`비색단검 ${bisaekActive?'ON':'OFF'} → 공속 ${atkSpeedMult.toFixed(2)}`);
@@ -2190,36 +2674,10 @@ document.getElementById('shake-chk').addEventListener('change',e=>{
   shakeEnabled=e.target.checked;
   log(`화면 흔들림 ${shakeEnabled?'ON':'OFF'}`);
 });
-document.getElementById('quarter-chk').addEventListener('change',e=>{
-  quarterView=e.target.checked;
-  applyCamera();
-  resize();
-  log(`쿼터뷰 ${quarterView?'ON':'OFF'}`);
-});
-let showWViz=false;
-document.getElementById('wviz-chk').addEventListener('change',e=>{
-  showWViz=e.target.checked;
-  log(`W 범위 시각화 ${showWViz?'ON':'OFF'}`);
-});
-function bindCam(rangeId, numId, key, fmt){
-  const r=document.getElementById(rangeId), n=document.getElementById(numId);
-  r.addEventListener('input',e=>{const v=parseFloat(e.target.value);cam[key]=v;n.value=fmt?fmt(v):v;applyCamera();});
-  n.addEventListener('input',e=>{const v=parseFloat(e.target.value);if(isNaN(v))return;cam[key]=v;r.value=v;applyCamera();});
-}
-bindCam('cam-roll','cam-roll-num','roll');
-bindCam('cam-sy','cam-sy-num','scaleY',v=>v.toFixed(2));
-bindCam('cam-sx','cam-sx-num','scaleX',v=>v.toFixed(2));
-bindCam('cam-tx','cam-tx-num','tiltX');
-bindCam('cam-ty','cam-ty-num','tiltY');
-bindCam('cam-persp','cam-persp-num','persp');
-bindCam('cam-zoom','cam-zoom-num','zoom',v=>v.toFixed(2));
-const refOv=document.getElementById('ref-overlay');
-document.getElementById('overlay-chk').addEventListener('change',e=>{refOv.style.display=e.target.checked?'block':'none';});
-document.getElementById('overlay-a').addEventListener('input',e=>{refOv.style.opacity=e.target.value;});
+const showWViz=false;
 
 // ── 단검 외형 설정 (크기, Y찌부) ──
-const dagVis = { scale:1, squish:1 };
-try{ const s=localStorage.getItem('dagVis'); if(s){ Object.assign(dagVis, JSON.parse(s)); } }catch(e){}
+const dagVis = { scale:0.90, squish:1.00 };
 // ── 단검 W 사거리 원(얇은 파란색 타원) 외형 — R 단검 방향별(좌하/우하/우상/좌상, rIdx 순서) ──
 //  scale  : 가로 반지름 배율 (CONF.wRange 기준)
 //  flatten: 세로/가로 비율 (1=정원, 작을수록 납작)
@@ -2230,17 +2688,6 @@ const wRingVis = [
   { scale:0.79, flatten:0.91, angle:-36 },  // 우상
   { scale:0.82, flatten:0.89, angle:133 },  // 좌상
 ];
-function bindDag(rangeId, numId, key){
-  const r=document.getElementById(rangeId), n=document.getElementById(numId);
-  r.value=dagVis[key]; n.value=dagVis[key].toFixed(2);
-  const update=v=>{ dagVis[key]=v; r.value=v; n.value=v.toFixed(2);
-    try{ localStorage.setItem('dagVis', JSON.stringify(dagVis)); }catch(e){} };
-  r.addEventListener('input',e=>update(parseFloat(e.target.value)));
-  n.addEventListener('input',e=>{const v=parseFloat(e.target.value);if(!isNaN(v))update(v);});
-}
-bindDag('dag-scale','dag-scale-num','scale');
-bindDag('dag-squish','dag-squish-num','squish');
-
 // ── R(궁) 단검 방향별 시각 보정값 (좌하/우하/우상/좌상, xDirs 순서) ──
 const RDAG_DEFAULT = [
   {dx: 22, dy: 17, squish:1.09},  // 좌하
@@ -2256,13 +2703,175 @@ document.getElementById('credit').addEventListener('click',()=>m.classList.add('
 document.getElementById('credit-close').addEventListener('click',()=>m.classList.remove('show'));
 m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');});})();
 
+// ============================================================
+// 설정 (자동평타 / 마우스 반전 / D-F 스왑 / 스킬 키 커스텀)
+// ============================================================
+const settings={autoAtk:true, mouseInvert:false, dfSwap:false, volume:1, moveAtkClick:true};
+function applyVolume(){ masterGain.gain.value=settings.volume*settings.volume; } // 제곱 커브: 슬라이더 체감 음량을 선형에 가깝게
+// 키 입력은 e.code(물리 키 위치) 기반: 한/영 입력 상태·Caps Lock과 무관하게 동작 (macOS 한글 IME 대응)
+const keyBind={q:'KeyQ', w:'KeyW', e:'KeyE', r:'KeyR'};
+const KEY_SLOTS=['q','w','e','r'];
+const RESERVED_CODES=new Set(['KeyA','KeyS','KeyD','KeyF','Digit1','Digit2','Digit3','Digit4','Numpad1','Numpad2','Numpad3','Numpad4','Backquote','Space']); // 다른 기능에 쓰이는 키는 바인딩 금지
+const BINDABLE_RE=/^(Key[A-Z]|Digit\d|Numpad\d|Minus|Equal|BracketLeft|BracketRight|Semicolon|Quote|Comma|Period|Slash|Backslash|Backquote)$/;
+const CODE_PUNCT={Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']',Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Backslash:'\\',Backquote:'`'};
+let captureSlot=null; // 키 입력 대기 중인 슬롯
+
+// code → 표시용 라벨 ('KeyT'→'T', 'Digit5'→'5', 'Semicolon'→';')
+function codeLabel(c){
+  if(c.startsWith('Key'))return c.slice(3);
+  if(c.startsWith('Digit'))return c.slice(5);
+  if(c.startsWith('Numpad'))return 'N'+c.slice(6);
+  return CODE_PUNCT[c]||c;
+}
+// 구버전 저장값(단일 문자) 또는 code 문자열 → 유효한 code로 정규화 (무효 시 null)
+function toCode(v){
+  if(typeof v!=='string')return null;
+  if(/^[a-z]$/.test(v))return 'Key'+v.toUpperCase();
+  if(/^[0-9]$/.test(v))return 'Digit'+v;
+  for(const code in CODE_PUNCT)if(CODE_PUNCT[code]===v)return code;
+  if(BINDABLE_RE.test(v))return v;
+  return null;
+}
+
+// 설정 localStorage 저장/복원
+function saveSettings(){
+  try{localStorage.setItem('shoichiSettings',JSON.stringify({autoAtk:settings.autoAtk,mouseInvert:settings.mouseInvert,dfSwap:settings.dfSwap,volume:settings.volume,moveAtkClick:settings.moveAtkClick,keyBind}));}catch(e){}
+}
+function loadSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem('shoichiSettings'));
+    if(!s)return;
+    if(typeof s.autoAtk==='boolean')settings.autoAtk=s.autoAtk;
+    if(typeof s.mouseInvert==='boolean')settings.mouseInvert=s.mouseInvert;
+    if(typeof s.dfSwap==='boolean')settings.dfSwap=s.dfSwap;
+    if(typeof s.volume==='number'&&isFinite(s.volume))settings.volume=Math.min(1,Math.max(0,s.volume));
+    if(typeof s.moveAtkClick==='boolean')settings.moveAtkClick=s.moveAtkClick;
+    if(s.keyBind){
+      for(const k of KEY_SLOTS){
+        const code=toCode(s.keyBind[k]); // 구버전(문자) 저장값도 code 형식으로 마이그레이션
+        if(code&&!RESERVED_CODES.has(code))keyBind[k]=code;
+      }
+      // 저장값이 손상되어 중복 바인딩이면 해당 슬롯을 기본키로 복구
+      const seen=new Set();
+      for(const k of KEY_SLOTS){ if(seen.has(keyBind[k]))keyBind[k]='Key'+k.toUpperCase(); seen.add(keyBind[k]); }
+    }
+  }catch(e){}
+}
+
+function updateKeyBtns(){
+  for(const s of KEY_SLOTS){
+    const b=document.getElementById('key-'+s);
+    b.textContent=captureSlot===s?'...':codeLabel(keyBind[s]);
+    b.classList.toggle('capturing',captureSlot===s);
+  }
+  // 하단 HUD 키 라벨 동기화
+  document.querySelector('#bQ .key').textContent=codeLabel(keyBind.q);
+  document.querySelector('#bW .key').textContent=codeLabel(keyBind.w);
+  document.querySelector('#bE .key').textContent=codeLabel(keyBind.e);
+  document.querySelector('#bR .key').textContent=codeLabel(keyBind.r);
+}
+
+// D/F 스왑: 키 기능과 하단 아이콘 순서를 함께 교체
+function applyDfSwap(){
+  const hud=document.getElementById('hud');
+  const bD=document.getElementById('bD'), bF=document.getElementById('bF');
+  const first=settings.dfSwap?bF:bD, second=settings.dfSwap?bD:bF;
+  hud.insertBefore(first,second);
+  first.style.marginLeft='12px'; second.style.marginLeft='0';
+  first.querySelector('.key').textContent='D';
+  second.querySelector('.key').textContent='F';
+}
+
+(()=>{
+  const m=document.getElementById('settings-modal');
+  document.getElementById('settings-btn').addEventListener('click',()=>m.classList.add('show'));
+  document.getElementById('settings-close').addEventListener('click',()=>{captureSlot=null;updateKeyBtns();m.classList.remove('show');});
+  m.addEventListener('click',e=>{if(e.target===m){captureSlot=null;updateKeyBtns();m.classList.remove('show');}});
+  document.getElementById('set-autoatk').addEventListener('change',e=>{
+    settings.autoAtk=e.target.checked;
+    saveSettings();
+    log(`스킬 이후 자동평타 ${settings.autoAtk?'ON':'OFF'}`);
+  });
+  document.getElementById('set-invert').addEventListener('change',e=>{
+    settings.mouseInvert=e.target.checked;
+    rightDown=false; // 버튼 의미가 바뀌므로 홀드 상태 초기화
+    saveSettings();
+    log(`마우스 반전 ${settings.mouseInvert?'ON (좌클릭 이동)':'OFF (우클릭 이동)'}`);
+  });
+  document.getElementById('set-dfswap').addEventListener('change',e=>{
+    settings.dfSwap=e.target.checked;
+    applyDfSwap();
+    saveSettings();
+    log(`D/F 위치 ${settings.dfSwap?'교체':'기본'}`);
+  });
+  document.getElementById('set-moveatk').addEventListener('change',e=>{
+    settings.moveAtkClick=e.target.checked;
+    if(!settings.moveAtkClick)aMode=false; // 모드 OFF 전환 시 진행 중인 A모드 해제
+    saveSettings();
+    log(`플레이어 이동 공격 클릭 ${settings.moveAtkClick?'ON':'OFF (a키 즉시 평타)'}`);
+  });
+  const volSlider=document.getElementById('vol-slider'), volVal=document.getElementById('vol-val');
+  volSlider.addEventListener('input',e=>{
+    settings.volume=e.target.value/100;
+    applyVolume();
+    volVal.textContent=e.target.value+'%';
+    saveSettings();
+  });
+  for(const s of KEY_SLOTS){
+    document.getElementById('key-'+s).addEventListener('click',()=>{
+      captureSlot=captureSlot===s?null:s;
+      updateKeyBtns();
+    });
+  }
+  document.getElementById('key-reset').addEventListener('click',()=>{
+    keyBind.q='KeyQ';keyBind.w='KeyW';keyBind.e='KeyE';keyBind.r='KeyR';
+    captureSlot=null;updateKeyBtns();
+    saveSettings();
+    log('스킬 키 초기화 (QWER)');
+  });
+  // 저장된 설정 복원 및 UI 반영
+  loadSettings();
+  document.getElementById('set-autoatk').checked=settings.autoAtk;
+  document.getElementById('set-invert').checked=settings.mouseInvert;
+  document.getElementById('set-dfswap').checked=settings.dfSwap;
+  document.getElementById('set-moveatk').checked=settings.moveAtkClick;
+  if(settings.dfSwap)applyDfSwap();
+  applyVolume();
+  volSlider.value=Math.round(settings.volume*100);
+  volVal.textContent=Math.round(settings.volume*100)+'%';
+  updateKeyBtns();
+})();
+
+// 시작 안내 모달: 하루에 한 번 표시 ('오늘 다시 보지 않기' 체크 시 당일 미표시)
+(()=>{
+  const m=document.getElementById('notice-modal');
+  const today=new Date().toDateString();
+  let hidden=null;
+  try{hidden=localStorage.getItem('noticeHideDate');}catch(e){} // file:// 등 localStorage 불가 환경 대비
+  if(hidden!==today) m.classList.add('show');
+  document.getElementById('notice-close').addEventListener('click',()=>{
+    m.classList.remove('show');
+    if(document.getElementById('notice-hide-chk').checked){
+      try{localStorage.setItem('noticeHideDate',today);}catch(e){}
+    }
+  });
+})();
+
 document.getElementById('cd-reset-btn').addEventListener('click',()=>{
   cdResetMode=!cdResetMode;
   const btn=document.getElementById('cd-reset-btn');
   btn.textContent=`쿨초기화 모드: ${cdResetMode?'ON':'OFF'}`;
   btn.style.borderColor=cdResetMode?'#f80':'#555';
   btn.style.color=cdResetMode?'#f80':'#ddd';
-  if(cdResetMode){P.qCd=0;P.wCd=0;P.eCd=0;P.rCd=0;P.atkCd=0;P.blinkCd=0;P.dCd=0;}
+  if(cdResetMode){
+    P.qCd=0;P.wCd=0;P.eCd=0;P.rCd=0;P.atkCd=0;P.blinkCd=0;P.dCd=0;
+    // 원작 동작: 쿨초모드 활성화 시 Q2(강화) 상태 해제
+    if(P.qEnhanced){
+      P.qEnhanced=false;P.qEnhTimer=0;
+      document.getElementById('bQ').classList.remove('enhanced');
+      document.getElementById('qIcon').src='icon/shoqfix.png';
+    }
+  }
   log(`쿨초기화 모드 ${cdResetMode?'ON':'OFF'}`);
 });
 
